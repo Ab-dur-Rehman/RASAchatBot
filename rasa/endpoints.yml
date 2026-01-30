@@ -1,0 +1,76 @@
+# =============================================================================
+# RASA ENDPOINTS CONFIGURATION
+# =============================================================================
+# Defines service endpoints for RASA components
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Action Server
+# -----------------------------------------------------------------------------
+# Custom actions are executed by the action server
+action_endpoint:
+  url: "http://action-server:5055/webhook"
+  # For local development without Docker:
+  # url: "http://localhost:5055/webhook"
+
+# -----------------------------------------------------------------------------
+# Tracker Store (Redis)
+# -----------------------------------------------------------------------------
+# Persists conversation state across restarts
+tracker_store:
+  type: redis
+  url: redis
+  port: 6379
+  db: 0
+  # key_prefix: "tracker:"
+  # password: "${REDIS_PASSWORD}"  # Uncomment for production
+
+# For local development without Redis:
+# tracker_store:
+#   type: InMemoryTrackerStore
+
+# -----------------------------------------------------------------------------
+# Lock Store (Redis)
+# -----------------------------------------------------------------------------
+# Ensures consistent behavior with concurrent requests
+lock_store:
+  type: redis
+  url: redis
+  port: 6379
+  db: 1
+  # key_prefix: "lock:"
+  # password: "${REDIS_PASSWORD}"
+
+# -----------------------------------------------------------------------------
+# Event Broker (Optional - for analytics/streaming)
+# -----------------------------------------------------------------------------
+# Publishes events for external consumption (analytics, logging)
+# event_broker:
+#   type: pika
+#   url: rabbitmq
+#   username: guest
+#   password: guest
+#   queues:
+#     - rasa_events
+
+# For Kafka:
+# event_broker:
+#   type: kafka
+#   url: kafka:9092
+#   topic: rasa_events
+
+# -----------------------------------------------------------------------------
+# Model Server (Optional - for model serving)
+# -----------------------------------------------------------------------------
+# Pull models from a remote server instead of local filesystem
+# models:
+#   url: "http://model-server:5000/models"
+#   wait_time_between_pulls: 10  # seconds
+
+# -----------------------------------------------------------------------------
+# NLG Server (Optional - external response generation)
+# -----------------------------------------------------------------------------
+# Use external server for response generation
+# nlg:
+#   type: callback
+#   url: "http://nlg-server:5060/nlg"

@@ -1,0 +1,245 @@
+# =============================================================================
+# DOCKER COMPOSE - RASA CHATBOT PRODUCTION SETUP
+# =============================================================================
+# Multi-container deployment for the complete chatbot system
+# =============================================================================
+
+version: "3.8"
+
+services:
+  # ===========================================================================
+  # RASA SERVER - Core NLU and Dialogue Management
+  # ===========================================================================
+  rasa:
+    image: rasa/rasa:3.6.15-full
+    container_name: rasa-server
+    ports:
+      - "5005:5005"
+    volumes:
+      - ./rasa:/app
+      - ./models:/app/models
+    environment:
+      - RASA_DUCKLING_HTTP_URL=http://duckling:8000
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-chatbot}
+      - POSTGRES_USER=${POSTGRES_USER:-rasa}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+    command:
+      - run
+      - --enable-api
+      - --cors
+      - "*"
+      - --debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      duckling:
+        condition: service_started
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5005/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  # ===========================================================================
+  # RASA ACTION SERVER - Custom Actions
+  # ===========================================================================
+  action-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.actions
+    container_name: rasa-actions
+    ports:
+      - "5055:5055"
+    volumes:
+      - ./rasa/actions:/app/actions
+      - ./knowledge_base:/app/knowledge_base
+    environment:
+      - API_BASE_URL=${API_BASE_URL:-http://api-server:8000}
+      - REDIS_URL=redis://redis:6379/0
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB:-chatbot}
+      - DB_USER=${POSTGRES_USER:-rasa}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      - postgres
+      - redis
+      - chromadb
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5055/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ===========================================================================
+  # ADMIN API SERVER - Configuration Management
+  # ===========================================================================
+  admin-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.admin
+    container_name: admin-api
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB:-chatbot}
+      - DB_USER=${POSTGRES_USER:-rasa}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ===========================================================================
+  # DUCKLING - Entity Extraction (dates, times, etc.)
+  # ===========================================================================
+  duckling:
+    image: rasa/duckling:0.2.0.2-r1
+    container_name: duckling
+    ports:
+      - "8000:8000"
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ===========================================================================
+  # CHROMADB - Vector Store for Knowledge Base
+  # ===========================================================================
+  chromadb:
+    image: chromadb/chroma:0.4.22
+    container_name: chromadb
+    ports:
+      - "8001:8000"
+    volumes:
+      - chromadb-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # ===========================================================================
+  # POSTGRESQL - Database for Config and Audit
+  # ===========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./admin/config/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-chatbot}
+      - POSTGRES_USER=${POSTGRES_USER:-rasa}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rasa} -d ${POSTGRES_DB:-chatbot}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ===========================================================================
+  # REDIS - Caching and Session Management
+  # ===========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
+    networks:
+      - chatbot-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ===========================================================================
+  # NGINX - Reverse Proxy (Optional, for production)
+  # ===========================================================================
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - rasa
+      - action-server
+      - admin-api
+    networks:
+      - chatbot-network
+    profiles:
+      - production
+    restart: unless-stopped
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:
+  chatbot-network:
+    driver: bridge
+    name: chatbot-network
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  postgres-data:
+    name: chatbot-postgres-data
+  redis-data:
+    name: chatbot-redis-data
+  chromadb-data:
+    name: chatbot-chromadb-data

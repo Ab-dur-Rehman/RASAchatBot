@@ -1,0 +1,482 @@
+# =============================================================================
+# CONVERSATION STORIES
+# =============================================================================
+# Stories define example conversation paths for training the dialogue model.
+# These help RASA learn how to handle multi-turn conversations.
+# =============================================================================
+
+version: "3.1"
+
+stories:
+
+# =============================================================================
+# GREETING & CHITCHAT FLOWS
+# =============================================================================
+
+- story: greeting and introduction
+  steps:
+    - intent: greet
+    - action: utter_greet
+
+- story: goodbye flow
+  steps:
+    - intent: goodbye
+    - action: utter_goodbye
+
+- story: thank you response
+  steps:
+    - intent: thank_you
+    - action: utter_thank_you_response
+
+- story: bot challenge response
+  steps:
+    - intent: bot_challenge
+    - action: utter_iamabot
+
+- story: user happy mood
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: mood_great
+    - action: utter_happy
+
+- story: user unhappy mood
+  steps:
+    - intent: mood_unhappy
+    - action: utter_cheer_up
+
+- story: greeting then goodbye
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: goodbye
+    - action: utter_goodbye
+
+# =============================================================================
+# BUSINESS Q&A FLOWS
+# =============================================================================
+
+- story: ask about business hours
+  steps:
+    - intent: ask_hours
+    - action: action_answer_question
+    - slot_was_set:
+        - qa_answer: "Our business hours are..."
+
+- story: ask about pricing
+  steps:
+    - intent: ask_pricing
+    - action: action_answer_question
+
+- story: ask about location
+  steps:
+    - intent: ask_location
+    - action: action_answer_question
+
+- story: ask about policies
+  steps:
+    - intent: ask_policy
+    - action: action_answer_question
+
+- story: ask about services
+  steps:
+    - intent: ask_services
+    - action: action_answer_question
+
+- story: ask general business info
+  steps:
+    - intent: ask_business_info
+    - action: action_answer_question
+
+- story: ask contact info
+  steps:
+    - intent: ask_contact
+    - action: utter_provide_contact
+
+- story: ask FAQ then follow up
+  steps:
+    - intent: ask_faq
+    - action: action_answer_question
+    - intent: thank_you
+    - action: utter_thank_you_response
+
+# =============================================================================
+# BOOKING FLOWS - HAPPY PATH
+# =============================================================================
+
+- story: complete booking happy path
+  steps:
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+    - slot_was_set:
+        - service_type: "consultation"
+    - slot_was_set:
+        - booking_date: "2024-01-15"
+    - slot_was_set:
+        - booking_time: "14:00"
+    - slot_was_set:
+        - customer_name: "John Smith"
+    - slot_was_set:
+        - customer_email: "john@example.com"
+    - slot_was_set:
+        - customer_phone: "555-123-4567"
+    - active_loop: null
+    - action: utter_booking_confirm_prompt
+    - intent: affirm
+    - action: action_create_booking
+    - action: utter_booking_success
+
+- story: booking with entities in initial message
+  steps:
+    - intent: book_service
+      entities:
+        - service_type: "demo"
+        - date: "next Monday"
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+    - slot_was_set:
+        - service_type: "demo"
+    - slot_was_set:
+        - booking_date: "2024-01-15"
+    - slot_was_set:
+        - booking_time: "10:00"
+    - slot_was_set:
+        - customer_name: "Jane Doe"
+    - slot_was_set:
+        - customer_email: "jane@example.com"
+    - slot_was_set:
+        - customer_phone: "555-987-6543"
+    - active_loop: null
+    - action: utter_booking_confirm_prompt
+    - intent: affirm
+    - action: action_create_booking
+
+# =============================================================================
+# BOOKING FLOWS - EDGE CASES
+# =============================================================================
+
+- story: booking task disabled
+  steps:
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: false
+    - action: utter_task_disabled
+
+- story: booking denied at confirmation
+  steps:
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+    - slot_was_set:
+        - service_type: "consultation"
+    - slot_was_set:
+        - booking_date: "2024-01-15"
+    - slot_was_set:
+        - booking_time: "14:00"
+    - slot_was_set:
+        - customer_name: "John Smith"
+    - slot_was_set:
+        - customer_email: "john@example.com"
+    - slot_was_set:
+        - customer_phone: "555-123-4567"
+    - active_loop: null
+    - action: utter_booking_confirm_prompt
+    - intent: deny
+    - action: action_reset_slots
+    - action: utter_default
+
+- story: booking interrupted by human handoff request
+  steps:
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+    - intent: handoff_human
+    - action: action_handoff_to_human
+    - active_loop: null
+
+# =============================================================================
+# MEETING SCHEDULING FLOWS
+# =============================================================================
+
+- story: schedule meeting happy path
+  steps:
+    - intent: schedule_meeting
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: meeting_form
+    - active_loop: meeting_form
+    - slot_was_set:
+        - meeting_type: "sales call"
+    - slot_was_set:
+        - meeting_date: "2024-01-16"
+    - slot_was_set:
+        - meeting_time: "11:00"
+    - slot_was_set:
+        - meeting_duration: "30 minutes"
+    - slot_was_set:
+        - attendee_email: "client@example.com"
+    - active_loop: null
+    - action: utter_meeting_confirm_prompt
+    - intent: affirm
+    - action: action_schedule_meeting
+    - action: utter_meeting_scheduled
+
+- story: schedule meeting with initial entities
+  steps:
+    - intent: schedule_meeting
+      entities:
+        - service_type: "technical consultation"
+        - date: "Tuesday"
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: meeting_form
+    - active_loop: meeting_form
+    - slot_was_set:
+        - meeting_type: "technical consultation"
+    - slot_was_set:
+        - meeting_date: "2024-01-16"
+    - slot_was_set:
+        - meeting_time: "14:00"
+    - slot_was_set:
+        - meeting_duration: "1 hour"
+    - slot_was_set:
+        - attendee_email: "tech@example.com"
+    - active_loop: null
+    - action: utter_meeting_confirm_prompt
+    - intent: affirm
+    - action: action_schedule_meeting
+
+# =============================================================================
+# CANCEL BOOKING FLOWS
+# =============================================================================
+
+- story: cancel booking with ID
+  steps:
+    - intent: cancel_booking
+      entities:
+        - booking_id: "BK-2024-1234"
+    - action: action_cancel_booking
+    - action: utter_booking_cancelled
+
+- story: cancel booking without ID
+  steps:
+    - intent: cancel_booking
+    - action: booking_lookup_form
+    - active_loop: booking_lookup_form
+    - slot_was_set:
+        - booking_id: "BK-2024-5678"
+    - active_loop: null
+    - action: action_cancel_booking
+    - action: utter_booking_cancelled
+
+- story: cancel booking confirm
+  steps:
+    - intent: cancel_booking
+    - action: booking_lookup_form
+    - active_loop: booking_lookup_form
+    - slot_was_set:
+        - booking_id: "BK-2024-1234"
+    - active_loop: null
+    - action: action_check_booking_status
+    - action: utter_booking_confirm_prompt
+    - intent: affirm
+    - action: action_cancel_booking
+    - action: utter_booking_cancelled
+
+# =============================================================================
+# RESCHEDULE BOOKING FLOWS
+# =============================================================================
+
+- story: reschedule booking happy path
+  steps:
+    - intent: reschedule_booking
+      entities:
+        - booking_id: "BK-2024-1234"
+    - action: action_check_booking_status
+    - action: booking_form
+    - active_loop: booking_form
+    - slot_was_set:
+        - booking_date: "2024-01-20"
+    - slot_was_set:
+        - booking_time: "15:00"
+    - active_loop: null
+    - action: utter_booking_confirm_prompt
+    - intent: affirm
+    - action: action_reschedule_booking
+    - action: utter_booking_rescheduled
+
+- story: reschedule with new date provided
+  steps:
+    - intent: reschedule_booking
+      entities:
+        - booking_id: "BK-2024-1234"
+        - date: "next Friday"
+    - action: action_check_booking_status
+    - action: action_reschedule_booking
+    - action: utter_booking_rescheduled
+
+# =============================================================================
+# CHECK BOOKING STATUS FLOWS
+# =============================================================================
+
+- story: check booking with ID
+  steps:
+    - intent: check_booking
+      entities:
+        - booking_id: "BK-2024-1234"
+    - action: action_check_booking_status
+
+- story: check booking without ID
+  steps:
+    - intent: check_booking
+    - action: booking_lookup_form
+    - active_loop: booking_lookup_form
+    - slot_was_set:
+        - booking_id: "BK-2024-5678"
+    - active_loop: null
+    - action: action_check_booking_status
+
+# =============================================================================
+# HUMAN HANDOFF FLOWS
+# =============================================================================
+
+- story: user requests human directly
+  steps:
+    - intent: handoff_human
+    - action: action_handoff_to_human
+    - action: utter_handoff_initiated
+
+- story: frustrated user then handoff
+  steps:
+    - intent: mood_unhappy
+    - action: utter_cheer_up
+    - intent: handoff_human
+    - action: action_handoff_to_human
+
+- story: user reports problem then handoff
+  steps:
+    - intent: report_problem
+    - action: utter_ask_handoff_reason
+    - intent: handoff_human
+    - action: action_handoff_to_human
+
+# =============================================================================
+# FEEDBACK FLOWS
+# =============================================================================
+
+- story: user provides feedback
+  steps:
+    - intent: provide_feedback
+    - action: action_collect_callback_info
+    - action: utter_thank_you_response
+
+# =============================================================================
+# OUT OF SCOPE FLOWS
+# =============================================================================
+
+- story: out of scope question
+  steps:
+    - intent: out_of_scope
+    - action: utter_out_of_scope
+
+- story: out of scope then proper question
+  steps:
+    - intent: out_of_scope
+    - action: utter_out_of_scope
+    - intent: ask_services
+    - action: action_answer_question
+
+# =============================================================================
+# MULTI-TURN CONVERSATIONS
+# =============================================================================
+
+- story: greeting then booking then thank
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+    - slot_was_set:
+        - service_type: "consultation"
+    - slot_was_set:
+        - booking_date: "2024-01-15"
+    - slot_was_set:
+        - booking_time: "14:00"
+    - slot_was_set:
+        - customer_name: "John Smith"
+    - slot_was_set:
+        - customer_email: "john@example.com"
+    - slot_was_set:
+        - customer_phone: "555-123-4567"
+    - active_loop: null
+    - action: utter_booking_confirm_prompt
+    - intent: affirm
+    - action: action_create_booking
+    - action: utter_booking_success
+    - intent: thank_you
+    - action: utter_thank_you_response
+    - intent: goodbye
+    - action: utter_goodbye
+
+- story: ask questions then book
+  steps:
+    - intent: greet
+    - action: utter_greet
+    - intent: ask_services
+    - action: action_answer_question
+    - intent: ask_pricing
+    - action: action_answer_question
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+
+- story: book then check status
+  steps:
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+    - slot_was_set:
+        - service_type: "demo"
+    - slot_was_set:
+        - booking_date: "2024-01-15"
+    - slot_was_set:
+        - booking_time: "10:00"
+    - slot_was_set:
+        - customer_name: "Alice"
+    - slot_was_set:
+        - customer_email: "alice@example.com"
+    - slot_was_set:
+        - customer_phone: "555-111-2222"
+    - active_loop: null
+    - action: utter_booking_confirm_prompt
+    - intent: affirm
+    - action: action_create_booking
+    - action: utter_booking_success
+    - intent: check_booking
+    - action: action_check_booking_status

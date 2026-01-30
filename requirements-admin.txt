@@ -1,0 +1,33 @@
+# =============================================================================
+# Requirements for Admin API Server
+# =============================================================================
+
+# FastAPI framework
+fastapi>=0.100.0,<0.110.0
+uvicorn[standard]>=0.23.0,<0.30.0
+
+# Database
+asyncpg>=0.27.0,<0.30.0
+psycopg2-binary>=2.9.0,<3.0.0
+
+# Redis
+redis>=4.5.0,<5.0.0
+aioredis>=2.0.0
+
+# Data validation
+pydantic[email]>=1.10.0,<2.0.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.0
+python-multipart>=0.0.6
+
+# HTTP client
+httpx>=0.24.0
+
+# Utilities
+python-dateutil>=2.8.0
+pytz>=2023.3
+
+# CORS
+starlette>=0.27.0

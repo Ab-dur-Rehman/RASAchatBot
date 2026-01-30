@@ -1,0 +1,153 @@
+# =============================================================================
+# RASA NLU PIPELINE CONFIGURATION
+# =============================================================================
+# Optimized for business website chatbot with:
+# - Strong intent classification
+# - Entity extraction (dates, times, emails, etc.)
+# - Fallback handling
+# =============================================================================
+
+recipe: default.v1
+
+language: en
+
+# -----------------------------------------------------------------------------
+# NLU PIPELINE
+# -----------------------------------------------------------------------------
+# This pipeline balances accuracy with training speed
+
+pipeline:
+  # --- Tokenization ---
+  - name: WhitespaceTokenizer
+    intent_tokenization_flag: false
+    intent_split_symbol: "_"
+  
+  # --- Regex Features ---
+  # Helps with entity extraction for structured data
+  - name: RegexFeaturizer
+    case_sensitive: false
+  
+  # --- Lexical Features ---
+  - name: LexicalSyntacticFeaturizer
+  
+  # --- Count-based Features ---
+  - name: CountVectorsFeaturizer
+    analyzer: word
+    min_ngram: 1
+    max_ngram: 1
+  
+  - name: CountVectorsFeaturizer
+    analyzer: char_wb
+    min_ngram: 1
+    max_ngram: 4
+  
+  # --- Intent Classification ---
+  # DIETClassifier for joint intent and entity recognition
+  - name: DIETClassifier
+    epochs: 100
+    constrain_similarities: true
+    model_confidence: softmax
+    
+    # Entity recognition settings
+    entity_recognition: true
+    BILOU_flag: true
+    
+    # Regularization
+    weight_sparsity: 0.8
+    drop_rate: 0.2
+    drop_rate_attention: 0.0
+    
+    # Training settings
+    batch_size: [64, 256]
+    embedding_dimension: 20
+    
+    # Evaluation
+    evaluate_on_number_of_examples: 0
+    evaluate_every_number_of_epochs: 20
+  
+  # --- Entity Extraction for Structured Data ---
+  # Duckling for dates, times, numbers
+  - name: DucklingEntityExtractor
+    url: http://duckling:8000
+    dimensions:
+      - time
+      - number
+      - email
+      - phone-number
+      - duration
+    timeout: 3
+  
+  # --- Regex Entity Extraction ---
+  - name: RegexEntityExtractor
+    case_sensitive: false
+    use_lookup_tables: true
+    use_regexes: true
+    use_word_boundaries: true
+  
+  # --- Entity Synonyms ---
+  - name: EntitySynonymMapper
+  
+  # --- Fallback Classification ---
+  - name: FallbackClassifier
+    threshold: 0.4
+    ambiguity_threshold: 0.1
+
+# -----------------------------------------------------------------------------
+# DIALOGUE POLICIES
+# -----------------------------------------------------------------------------
+# Policies that determine conversation flow
+
+policies:
+  # --- Memoization Policy ---
+  # Remembers exact story patterns
+  - name: MemoizationPolicy
+    max_history: 5
+  
+  # --- Rule Policy ---
+  # Handles strict rules (forms, fallbacks)
+  - name: RulePolicy
+    core_fallback_threshold: 0.4
+    core_fallback_action_name: action_default_fallback
+    enable_fallback_prediction: true
+    restrict_rules: true
+    check_for_contradictions: true
+  
+  # --- TED Policy ---
+  # Transformer-based dialogue policy for complex conversations
+  - name: TEDPolicy
+    max_history: 10
+    epochs: 100
+    constrain_similarities: true
+    model_confidence: softmax
+    
+    # Architecture
+    transformer_size: 128
+    number_of_transformer_layers: 1
+    number_of_attention_heads: 4
+    
+    # Regularization
+    drop_rate: 0.1
+    drop_rate_attention: 0.0
+    weight_sparsity: 0.8
+    
+    # Training
+    batch_size: [64, 256]
+    embedding_dimension: 20
+    
+    # Evaluation
+    evaluate_on_number_of_examples: 0
+    evaluate_every_number_of_epochs: 50
+  
+  # --- Unexpected Intent Policy ---
+  # Handles unexpected user inputs during forms
+  - name: UnexpecTEDIntentPolicy
+    max_history: 5
+    epochs: 100
+
+# -----------------------------------------------------------------------------
+# ADDITIONAL SETTINGS
+# -----------------------------------------------------------------------------
+
+# Import paths for custom components
+importers:
+  - name: RasaFileImporter

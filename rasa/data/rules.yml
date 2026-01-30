@@ -1,0 +1,326 @@
+# =============================================================================
+# CONVERSATION RULES
+# =============================================================================
+# Rules define strict conversation patterns that should ALWAYS be followed.
+# Unlike stories, rules are not generalized - they're exact patterns.
+# =============================================================================
+
+version: "3.1"
+
+rules:
+
+# =============================================================================
+# BASIC RESPONSE RULES
+# =============================================================================
+
+- rule: Say goodbye anytime the user says goodbye
+  steps:
+    - intent: goodbye
+    - action: utter_goodbye
+
+- rule: Respond to thank you
+  steps:
+    - intent: thank_you
+    - action: utter_thank_you_response
+
+- rule: Respond to bot challenge
+  steps:
+    - intent: bot_challenge
+    - action: utter_iamabot
+
+- rule: Greet the user
+  steps:
+    - intent: greet
+    - action: utter_greet
+
+# =============================================================================
+# Q&A RULES
+# =============================================================================
+
+- rule: Answer business hours question
+  steps:
+    - intent: ask_hours
+    - action: action_answer_question
+
+- rule: Answer pricing question
+  steps:
+    - intent: ask_pricing
+    - action: action_answer_question
+
+- rule: Answer location question
+  steps:
+    - intent: ask_location
+    - action: action_answer_question
+
+- rule: Answer policy question
+  steps:
+    - intent: ask_policy
+    - action: action_answer_question
+
+- rule: Answer services question
+  steps:
+    - intent: ask_services
+    - action: action_answer_question
+
+- rule: Answer general business info
+  steps:
+    - intent: ask_business_info
+    - action: action_answer_question
+
+- rule: Answer FAQ question
+  steps:
+    - intent: ask_faq
+    - action: action_answer_question
+
+- rule: Provide contact info
+  steps:
+    - intent: ask_contact
+    - action: utter_provide_contact
+
+# =============================================================================
+# BOOKING FORM RULES
+# =============================================================================
+
+- rule: Activate booking form
+  steps:
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: booking_form
+    - active_loop: booking_form
+
+- rule: Booking task disabled
+  steps:
+    - intent: book_service
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: false
+    - action: utter_task_disabled
+
+- rule: Submit booking form
+  condition:
+    - active_loop: booking_form
+  steps:
+    - action: booking_form
+    - active_loop: null
+    - slot_was_set:
+        - requested_slot: null
+    - action: utter_booking_confirm_prompt
+
+- rule: Confirm and create booking
+  condition:
+    - slot_was_set:
+        - service_type: "consultation"
+  steps:
+    - intent: affirm
+    - action: action_create_booking
+    - action: utter_booking_success
+    - action: action_reset_slots
+
+- rule: User declines booking confirmation
+  condition:
+    - slot_was_set:
+        - service_type: "consultation"
+  steps:
+    - intent: deny
+    - action: action_reset_slots
+    - action: utter_default
+
+# =============================================================================
+# MEETING FORM RULES
+# =============================================================================
+
+- rule: Activate meeting form
+  steps:
+    - intent: schedule_meeting
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: true
+    - action: meeting_form
+    - active_loop: meeting_form
+
+- rule: Meeting task disabled
+  steps:
+    - intent: schedule_meeting
+    - action: action_check_task_enabled
+    - slot_was_set:
+        - task_enabled: false
+    - action: utter_task_disabled
+
+- rule: Submit meeting form
+  condition:
+    - active_loop: meeting_form
+  steps:
+    - action: meeting_form
+    - active_loop: null
+    - slot_was_set:
+        - requested_slot: null
+    - action: utter_meeting_confirm_prompt
+
+- rule: Confirm and schedule meeting
+  condition:
+    - slot_was_set:
+        - meeting_type: true
+  steps:
+    - intent: affirm
+    - action: action_schedule_meeting
+    - action: utter_meeting_scheduled
+    - action: action_reset_slots
+
+# =============================================================================
+# BOOKING LOOKUP FORM RULES
+# =============================================================================
+
+- rule: Activate booking lookup for check status
+  steps:
+    - intent: check_booking
+    - action: booking_lookup_form
+    - active_loop: booking_lookup_form
+
+- rule: Activate booking lookup for cancel (no ID)
+  condition:
+    - slot_was_set:
+        - booking_id: null
+  steps:
+    - intent: cancel_booking
+    - action: booking_lookup_form
+    - active_loop: booking_lookup_form
+
+- rule: Submit booking lookup form for check
+  condition:
+    - active_loop: booking_lookup_form
+  steps:
+    - action: booking_lookup_form
+    - active_loop: null
+    - slot_was_set:
+        - requested_slot: null
+    - action: action_check_booking_status
+
+# =============================================================================
+# CANCEL/RESCHEDULE RULES
+# =============================================================================
+
+- rule: Cancel booking with ID provided
+  steps:
+    - intent: cancel_booking
+      entities:
+        - booking_id
+    - action: action_cancel_booking
+    - action: utter_booking_cancelled
+
+- rule: Reschedule booking
+  steps:
+    - intent: reschedule_booking
+    - action: action_check_booking_status
+    - action: booking_form
+    - active_loop: booking_form
+
+# =============================================================================
+# HUMAN HANDOFF RULES
+# =============================================================================
+
+- rule: Handle human handoff request
+  steps:
+    - intent: handoff_human
+    - action: action_handoff_to_human
+    - action: utter_handoff_initiated
+
+- rule: Handle human handoff during form
+  condition:
+    - active_loop: booking_form
+  steps:
+    - intent: handoff_human
+    - action: action_handoff_to_human
+    - active_loop: null
+    - action: utter_handoff_initiated
+
+- rule: Handle human handoff during meeting form
+  condition:
+    - active_loop: meeting_form
+  steps:
+    - intent: handoff_human
+    - action: action_handoff_to_human
+    - active_loop: null
+    - action: utter_handoff_initiated
+
+# =============================================================================
+# PROBLEM REPORTING RULES
+# =============================================================================
+
+- rule: User reports a problem
+  steps:
+    - intent: report_problem
+    - action: utter_ask_handoff_reason
+
+- rule: User wants to provide feedback
+  steps:
+    - intent: provide_feedback
+    - action: action_collect_callback_info
+
+# =============================================================================
+# FALLBACK RULES
+# =============================================================================
+
+- rule: Ask for rephrase on low NLU confidence
+  steps:
+    - intent: nlu_fallback
+    - action: utter_default
+
+- rule: Handle out of scope
+  steps:
+    - intent: out_of_scope
+    - action: utter_out_of_scope
+
+# =============================================================================
+# FORM INTERRUPTION RULES
+# =============================================================================
+
+- rule: Handle affirmation during form (continue)
+  condition:
+    - active_loop: booking_form
+  steps:
+    - intent: affirm
+    - action: booking_form
+    - active_loop: booking_form
+
+- rule: Handle denial during form (ask to continue or quit)
+  condition:
+    - active_loop: booking_form
+  steps:
+    - intent: deny
+    - action: utter_ask_clarification
+    - action: booking_form
+    - active_loop: booking_form
+
+- rule: Handle goodbye during booking form
+  condition:
+    - active_loop: booking_form
+  steps:
+    - intent: goodbye
+    - action: action_reset_slots
+    - active_loop: null
+    - action: utter_goodbye
+
+- rule: Handle goodbye during meeting form
+  condition:
+    - active_loop: meeting_form
+  steps:
+    - intent: goodbye
+    - action: action_reset_slots
+    - active_loop: null
+    - action: utter_goodbye
+
+# =============================================================================
+# MOOD RULES
+# =============================================================================
+
+- rule: Respond to happy mood
+  steps:
+    - intent: mood_great
+    - action: utter_happy
+
+- rule: Respond to unhappy mood
+  steps:
+    - intent: mood_unhappy
+    - action: utter_cheer_up
