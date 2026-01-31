@@ -104,7 +104,10 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
       - REDIS_URL=redis://redis:6379/0
       - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
-      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - CORS_ORIGINS=*
+      - RASA_DIR=/app/rasa
+    volumes:
+      - ./rasa:/app/rasa:rw
     depends_on:
       postgres:
         condition: service_healthy

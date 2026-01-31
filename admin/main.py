@@ -13,6 +13,7 @@ import asyncpg
 import os
 
 from .config.api import router as config_router
+from .config.training import router as training_router
 
 
 # Database pool
@@ -54,11 +55,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
-cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+# CORS middleware - allow all origins for dashboard
+cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["*"],  # Allow dashboard to connect
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -66,6 +67,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(config_router)
+app.include_router(training_router)
 
 
 @app.get("/health")

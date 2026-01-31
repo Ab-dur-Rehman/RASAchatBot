@@ -1,502 +1,107 @@
 version: "3.1"
 
 # =============================================================================
-# DOMAIN CONFIGURATION - Business Website Chatbot
+# SIMPLE DOMAIN - Basic Chatbot for Testing
 # =============================================================================
-# This file defines the universe of the chatbot: intents, entities, slots,
-# responses, forms, and actions.
-# =============================================================================
-
-# -----------------------------------------------------------------------------
-# INTENTS
-# -----------------------------------------------------------------------------
-# Categorized by purpose for maintainability
 
 intents:
-  # --- Conversational / Chitchat ---
   - greet
   - goodbye
   - thank_you
   - affirm
   - deny
-  - bot_challenge       # "Are you a bot?"
+  - bot_challenge
   - mood_great
   - mood_unhappy
-  
-  # --- Business Information Q&A ---
-  - ask_business_info   # General business questions
-  - ask_pricing         # Pricing inquiries
-  - ask_hours           # Operating hours
-  - ask_location        # Address / location
-  - ask_policy          # Policies (refund, privacy, etc.)
-  - ask_services        # What services do you offer?
-  - ask_faq             # General FAQ questions
-  - ask_contact         # How to contact
-  
-  # --- Booking & Scheduling Tasks ---
-  - book_service        # Book an appointment/service
-  - schedule_meeting    # Schedule a meeting
-  - cancel_booking      # Cancel existing booking
-  - reschedule_booking  # Change booking date/time
-  - check_booking       # Check booking status
-  
-  # --- Support & Escalation ---
-  - handoff_human       # Request human agent
-  - report_problem      # Report an issue
-  - provide_feedback    # Give feedback
-  
-  # --- Fallback & Out-of-Scope ---
-  - out_of_scope        # Questions outside bot's knowledge
-  - nlu_fallback        # Low confidence catch-all
-
-# -----------------------------------------------------------------------------
-# ENTITIES
-# -----------------------------------------------------------------------------
-# Named entities extracted from user messages
+  - ask_business_info
+  - ask_pricing
+  - ask_hours
+  - ask_location
+  - ask_policy
+  - ask_services
+  - ask_faq
+  - ask_contact
+  - out_of_scope
+  - nlu_fallback
 
 entities:
-  # --- Service & Booking ---
-  - service_type        # consultation, demo, support, etc.
-  - booking_id          # Reference number
-  - party_size          # Number of attendees
-  
-  # --- Date & Time ---
-  - date                # Booking date
-  - time                # Booking time
-  - duration            # Meeting duration
-  
-  # --- Personal Information ---
-  - name                # Customer name
-  - email               # Email address
-  - phone               # Phone number
-  - company             # Company name
-  
-  # --- Location ---
-  - location            # City, address
-  
-  # --- Query Context ---
-  - info_type           # Type of info requested (hours, pricing, etc.)
-  - policy_type         # refund, privacy, cancellation, etc.
-
-# -----------------------------------------------------------------------------
-# SLOTS
-# -----------------------------------------------------------------------------
-# Memory for the conversation - stores extracted entities and form data
+  - info_type
 
 slots:
-  # --- Booking Form Slots ---
-  service_type:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: service_type
-      - type: from_intent
-        intent: book_service
-        value: null  # Will be asked if not provided
-  
-  booking_date:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: date
-      - type: custom
-        action: action_extract_date
-  
-  booking_time:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: time
-      - type: custom
-        action: action_extract_time
-  
-  customer_name:
+  info_type:
     type: text
     influence_conversation: false
     mappings:
       - type: from_entity
-        entity: name
-      - type: from_text
-        conditions:
-          - active_loop: booking_form
-            requested_slot: customer_name
-  
-  customer_email:
-    type: text
-    influence_conversation: false
-    mappings:
-      - type: from_entity
-        entity: email
-      - type: from_text
-        conditions:
-          - active_loop: booking_form
-            requested_slot: customer_email
-  
-  customer_phone:
-    type: text
-    influence_conversation: false
-    mappings:
-      - type: from_entity
-        entity: phone
-      - type: from_text
-        conditions:
-          - active_loop: booking_form
-            requested_slot: customer_phone
-  
-  party_size:
-    type: float
-    influence_conversation: false
-    mappings:
-      - type: from_entity
-        entity: party_size
-      - type: from_text
-        conditions:
-          - active_loop: booking_form
-            requested_slot: party_size
-  
-  # --- Meeting Form Slots ---
-  meeting_type:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: service_type
-      - type: from_text
-        conditions:
-          - active_loop: meeting_form
-            requested_slot: meeting_type
-  
-  meeting_date:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: date
-  
-  meeting_time:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: time
-  
-  meeting_duration:
-    type: text
-    influence_conversation: false
-    mappings:
-      - type: from_entity
-        entity: duration
-      - type: from_text
-        conditions:
-          - active_loop: meeting_form
-            requested_slot: meeting_duration
-  
-  attendee_email:
-    type: text
-    influence_conversation: false
-    mappings:
-      - type: from_entity
-        entity: email
-      - type: from_text
-        conditions:
-          - active_loop: meeting_form
-            requested_slot: attendee_email
-  
-  meeting_notes:
-    type: text
-    influence_conversation: false
-    mappings:
-      - type: from_text
-        conditions:
-          - active_loop: meeting_form
-            requested_slot: meeting_notes
-  
-  # --- Booking Lookup Slot ---
-  booking_id:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_entity
-        entity: booking_id
-      - type: from_text
-        conditions:
-          - active_loop: null
-            requested_slot: booking_id
-  
-  # --- Context Slots ---
-  current_booking:
-    type: any
-    influence_conversation: false
-    mappings:
-      - type: custom
-  
-  task_enabled:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: custom
-  
-  qa_answer:
-    type: text
-    influence_conversation: false
-    mappings:
-      - type: custom
-  
-  qa_source:
-    type: text
-    influence_conversation: false
-    mappings:
-      - type: custom
-  
-  # --- User Confirmation ---
-  confirmed:
-    type: bool
-    influence_conversation: true
-    mappings:
-      - type: from_intent
-        intent: affirm
-        value: true
-      - type: from_intent
-        intent: deny
-        value: false
-
-# -----------------------------------------------------------------------------
-# FORMS
-# -----------------------------------------------------------------------------
-# Multi-turn slot filling for structured tasks
-
-forms:
-  booking_form:
-    required_slots:
-      - service_type
-      - booking_date
-      - booking_time
-      - customer_name
-      - customer_email
-      - customer_phone
-    ignored_intents:
-      - out_of_scope
-      - nlu_fallback
-      - handoff_human
-  
-  meeting_form:
-    required_slots:
-      - meeting_type
-      - meeting_date
-      - meeting_time
-      - meeting_duration
-      - attendee_email
-    ignored_intents:
-      - out_of_scope
-      - nlu_fallback
-      - handoff_human
-  
-  booking_lookup_form:
-    required_slots:
-      - booking_id
-    ignored_intents:
-      - out_of_scope
-      - nlu_fallback
-
-# -----------------------------------------------------------------------------
-# RESPONSES
-# -----------------------------------------------------------------------------
-# Bot utterances - can be customized for brand voice
+        entity: info_type
 
 responses:
-  # --- Greetings & Farewells ---
   utter_greet:
-    - text: "Hello! 👋 Welcome to [Business Name]. I'm here to help you with information about our services, pricing, and I can also help you book appointments. What can I do for you today?"
-    - text: "Hi there! 👋 I'm your virtual assistant. I can answer questions about our business or help you schedule an appointment. How can I help?"
-  
+    - text: "Hello! 👋 Welcome! I'm here to help you with information about our services. What can I do for you today?"
+    - text: "Hi there! 👋 I'm your virtual assistant. How can I help you?"
+
   utter_goodbye:
-    - text: "Goodbye! Thanks for visiting. Have a great day! 🙂"
-    - text: "Take care! Feel free to come back if you have more questions. Bye! 👋"
-  
+    - text: "Goodbye! Have a great day! 👋"
+    - text: "Bye! Feel free to come back if you have more questions."
+
   utter_thank_you_response:
     - text: "You're welcome! Is there anything else I can help you with?"
     - text: "Happy to help! Let me know if you need anything else."
-  
-  # --- Affirmations ---
-  utter_happy:
-    - text: "Great! 😊"
-    - text: "Wonderful!"
-  
-  utter_cheer_up:
-    - text: "I'm sorry to hear that. 😔 Is there something I can help with to make things better?"
-  
-  # --- Bot Identity ---
-  utter_iamabot:
-    - text: "I'm a virtual assistant chatbot created to help you with information and bookings. For complex issues, I can connect you with a human team member."
-  
-  # --- Booking Form Prompts ---
-  utter_ask_service_type:
-    - text: "What type of service would you like to book? We offer:\n• Consultation\n• Demo\n• Support Session\n\nPlease choose one."
-  
-  utter_ask_booking_date:
-    - text: "What date would you like? (e.g., 'next Monday', 'January 15th', or 'tomorrow')"
-  
-  utter_ask_booking_time:
-    - text: "What time works best for you? Our available hours are 9 AM - 6 PM."
-  
-  utter_ask_customer_name:
-    - text: "May I have your full name for the booking?"
-  
-  utter_ask_customer_email:
-    - text: "What's your email address? We'll send the confirmation there."
-  
-  utter_ask_customer_phone:
-    - text: "And your phone number? (This helps us reach you if needed)"
-  
-  utter_ask_party_size:
-    - text: "How many people will be attending?"
-  
-  # --- Meeting Form Prompts ---
-  utter_ask_meeting_type:
-    - text: "What type of meeting would you like to schedule?\n• Sales call\n• Technical consultation\n• General inquiry"
-  
-  utter_ask_meeting_date:
-    - text: "What date would you prefer for the meeting?"
-  
-  utter_ask_meeting_time:
-    - text: "What time would you like to meet? We're available 9 AM - 5 PM on weekdays."
-  
-  utter_ask_meeting_duration:
-    - text: "How long do you expect the meeting to be? (15 min, 30 min, or 1 hour)"
-  
-  utter_ask_attendee_email:
-    - text: "Please provide your email address for the meeting invite."
-  
-  utter_ask_meeting_notes:
-    - text: "Any topics or notes you'd like to include for the meeting? (Type 'skip' if none)"
-  
-  # --- Booking Lookup ---
-  utter_ask_booking_id:
-    - text: "Please provide your booking reference number (e.g., BK-2024-1234)."
-  
-  # --- Confirmations ---
-  utter_booking_confirm_prompt:
-    - text: "Let me confirm your booking details:\n\n📋 **Booking Summary**\n• Service: {service_type}\n• Date: {booking_date}\n• Time: {booking_time}\n• Name: {customer_name}\n• Email: {customer_email}\n• Phone: {customer_phone}\n\nIs this correct?"
-  
-  utter_meeting_confirm_prompt:
-    - text: "Here's your meeting summary:\n\n📅 **Meeting Details**\n• Type: {meeting_type}\n• Date: {meeting_date}\n• Time: {meeting_time}\n• Duration: {meeting_duration}\n• Email: {attendee_email}\n\nShall I schedule this meeting?"
-  
-  # --- Success Messages ---
-  utter_booking_success:
-    - text: "Your booking is confirmed! ✅\n\n📋 **Confirmation**\nReference: {booking_id}\nService: {service_type}\nDate & Time: {booking_date} at {booking_time}\n\nYou'll receive a confirmation email shortly. Need to make changes? Just ask me to reschedule or cancel."
-  
-  utter_booking_cancelled:
-    - text: "Your booking (Reference: {booking_id}) has been cancelled. ✅\n\nWould you like to rebook or is there anything else I can help with?"
-  
-  utter_booking_rescheduled:
-    - text: "Your booking has been rescheduled! ✅\n\n📋 **Updated Booking**\nReference: {booking_id}\nNew Date: {booking_date}\nNew Time: {booking_time}\n\nA confirmation email is on its way."
-  
-  utter_meeting_scheduled:
-    - text: "Your meeting is scheduled! ✅\n\n📅 **Meeting Confirmation**\nDate: {meeting_date}\nTime: {meeting_time}\nDuration: {meeting_duration}\n\nA calendar invite has been sent to {attendee_email}."
-  
-  # --- Error Messages ---
-  utter_booking_error:
-    - text: "I'm sorry, there was an issue processing your booking. Please try again or contact us directly at [support email/phone]."
-  
-  utter_slot_validation_error:
-    - text: "I didn't quite catch that. Could you please rephrase?"
-  
-  utter_task_disabled:
-    - text: "I'm sorry, this service is currently unavailable. Please contact us directly or try again later."
-  
-  utter_date_invalid:
-    - text: "That date doesn't seem to be available. Please choose a weekday within the next 30 days."
-  
-  utter_time_invalid:
-    - text: "That time is outside our business hours (9 AM - 6 PM). Please choose another time."
-  
-  utter_email_invalid:
-    - text: "That doesn't look like a valid email address. Could you please check and try again?"
-  
-  utter_phone_invalid:
-    - text: "I couldn't recognize that phone number format. Please enter a valid phone number."
-  
-  # --- Q&A Responses ---
-  utter_qa_answer:
-    - text: "{qa_answer}\n\n📖 *Source: {qa_source}*"
-  
-  utter_no_answer_found:
-    - text: "I don't have specific information about that in my knowledge base. Here are some options:\n\n• I can connect you with our support team\n• You can leave your email and we'll get back to you\n• Check our website at [website URL]\n\nWhat would you prefer?"
-  
-  utter_ask_clarification:
-    - text: "I want to make sure I understand your question correctly. Could you provide more details about what you're looking for?"
-  
-  # --- Business Info Fallbacks ---
-  utter_provide_contact:
-    - text: "You can reach us at:\n📧 Email: support@[business].com\n📞 Phone: (555) 123-4567\n🌐 Website: www.[business].com"
-  
-  utter_provide_hours:
-    - text: "Our business hours are:\n🕐 Monday - Friday: 9 AM - 6 PM\n🕐 Saturday: 10 AM - 4 PM\n🔒 Sunday: Closed"
-  
-  # --- Human Handoff ---
-  utter_handoff_initiated:
-    - text: "I understand you'd like to speak with a human. Let me connect you with our support team.\n\n⏳ Please hold on while I transfer you. Alternatively, you can:\n• Call us at (555) 123-4567\n• Email support@[business].com\n• Leave your contact info and we'll reach out"
-  
-  utter_ask_handoff_reason:
-    - text: "Before I connect you with our team, could you briefly describe what you need help with? This will help them assist you faster."
-  
-  utter_collect_contact_for_callback:
-    - text: "Please leave your email address and we'll have someone contact you within 24 hours."
-  
-  # --- Fallback & Out of Scope ---
-  utter_default:
-    - text: "I'm not sure I understood that. Could you rephrase your question? I can help with:\n• Information about our services\n• Pricing and hours\n• Booking appointments\n• Checking or managing existing bookings"
-  
-  utter_out_of_scope:
-    - text: "I'm designed to help with questions about our business and booking services. I can't help with that particular topic, but I'm happy to answer other questions or connect you with our team."
 
-# -----------------------------------------------------------------------------
-# ACTIONS
-# -----------------------------------------------------------------------------
-# Custom actions executed by the action server
+  utter_iamabot:
+    - text: "I'm a virtual assistant chatbot, here to help you with questions about our business."
+
+  utter_happy:
+    - text: "Great to hear! 😊 How can I assist you today?"
+
+  utter_cheer_up:
+    - text: "I'm sorry to hear that. 😔 Let me know how I can help make things better."
+
+  utter_default:
+    - text: "I'm not sure I understand. Could you rephrase that?"
+    - text: "I didn't quite get that. Can you try asking in a different way?"
+
+  utter_out_of_scope:
+    - text: "I can only help with questions about our business, services, and appointments. Is there something else I can help you with?"
+
+  utter_provide_contact:
+    - text: "You can reach us at:\n📧 Email: support@example.com\n📞 Phone: (555) 123-4567\n🌐 Website: www.example.com"
+
+  utter_provide_hours:
+    - text: "We're open Monday to Friday, 9 AM to 6 PM. We're closed on weekends and holidays."
+
+  utter_provide_services:
+    - text: "We offer the following services:\n• Consultation - Expert advice sessions\n• Demo - Product demonstrations\n• Support - Technical assistance\nWould you like more details about any of these?"
+
+  utter_provide_pricing:
+    - text: "Our pricing varies by service:\n• Consultation: $50/hour\n• Demo: Free\n• Support: $75/hour\nContact us for a custom quote!"
+
+  utter_provide_location:
+    - text: "We're located at:\n📍 123 Business Street, Suite 100\nCity, State 12345\n\nYou can find us on Google Maps."
+
+  utter_provide_policy:
+    - text: "Our policies:\n• Cancellation: Free up to 24 hours before\n• Refunds: Processed within 5-7 business days\n• Privacy: We never share your data\n\nNeed more details on any policy?"
+
+  utter_faq_response:
+    - text: "Here are some common questions:\n• What services do you offer?\n• What are your hours?\n• How can I contact you?\n\nAsk me any of these!"
 
 actions:
-  # --- Q&A Actions ---
-  - action_answer_question
-  - action_search_knowledge_base
-  
-  # --- Task Configuration ---
-  - action_check_task_enabled
-  - action_get_task_config
-  
-  # --- Booking Actions ---
-  - action_create_booking
-  - action_cancel_booking
-  - action_reschedule_booking
-  - action_check_booking_status
-  - action_get_available_slots
-  
-  # --- Meeting Actions ---
-  - action_schedule_meeting
-  - action_get_available_meeting_times
-  
-  # --- Validation Actions ---
-  - validate_booking_form
-  - validate_meeting_form
-  - validate_booking_lookup_form
-  
-  # --- Utility Actions ---
-  - action_extract_date
-  - action_extract_time
-  - action_reset_slots
-  - action_log_interaction
-  
-  # --- Handoff Actions ---
-  - action_handoff_to_human
-  - action_collect_callback_info
-
-# -----------------------------------------------------------------------------
-# SESSION CONFIGURATION
-# -----------------------------------------------------------------------------
+  - utter_greet
+  - utter_goodbye
+  - utter_thank_you_response
+  - utter_iamabot
+  - utter_happy
+  - utter_cheer_up
+  - utter_default
+  - utter_out_of_scope
+  - utter_provide_contact
+  - utter_provide_hours
+  - utter_provide_services
+  - utter_provide_pricing
+  - utter_provide_location
+  - utter_provide_policy
+  - utter_faq_response
 
 session_config:
-  session_expiration_time: 60  # Minutes
-  carry_over_slots_to_new_session: false
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true

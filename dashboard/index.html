@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Admin Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 250px;
+            height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            z-index: 100;
+        }
+        .sidebar h1 { font-size: 20px; margin-bottom: 30px; display: flex; align-items: center; gap: 10px; }
+        .sidebar nav a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            padding: 12px 16px;
+            margin: 4px 0;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .sidebar nav a:hover, .sidebar nav a.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 30px;
+            min-height: 100vh;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+        .header h2 { font-size: 24px; color: #333; }
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .card h3 { font-size: 14px; color: #666; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 32px; font-weight: 700; color: #333; }
+        .card .change { font-size: 12px; color: #22c55e; margin-top: 4px; }
+        .card .change.negative { color: #ef4444; }
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        .panel h3 { font-size: 18px; margin-bottom: 20px; color: #333; display: flex; align-items: center; gap: 10px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .form-group textarea { min-height: 80px; resize: vertical; font-family: inherit; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn:hover { background: #5a6fd6; transform: translateY(-1px); }
+        .btn:active { transform: translateY(0); }
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #5a6268; }
+        .btn-success { background: #22c55e; }
+        .btn-success:hover { background: #16a34a; }
+        .btn-danger { background: #ef4444; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-sm { padding: 8px 16px; font-size: 13px; }
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        .conversation-list { max-height: 400px; overflow-y: auto; }
+        .conversation-item {
+            padding: 16px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .conversation-item:hover { background: #f9fafb; }
+        .conversation-item:last-child { border-bottom: none; }
+        .conversation-item .user { color: #667eea; font-weight: 600; font-size: 13px; }
+        .conversation-item .bot { color: #22c55e; font-weight: 600; font-size: 13px; }
+        .conversation-item .preview { color: #333; font-size: 14px; margin-top: 4px; }
+        .conversation-item .meta { color: #999; font-size: 12px; margin-top: 4px; display: flex; gap: 16px; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .status-badge.success { background: #dcfce7; color: #16a34a; }
+        .status-badge.warning { background: #fef3c7; color: #d97706; }
+        .status-badge.error { background: #fee2e2; color: #dc2626; }
+        .status-badge.info { background: #dbeafe; color: #2563eb; }
+        .status-badge::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+        .intent-tag {
+            display: inline-block;
+            background: #e0e7ff;
+            color: #4f46e5;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            margin: 2px;
+        }
+        .example-item {
+            background: #f9fafb;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .example-item .text { flex: 1; }
+        .example-item .intent { color: #667eea; font-weight: 500; font-size: 13px; }
+        .example-item .example-text { color: #333; margin-top: 2px; }
+        .example-item .actions { display: flex; gap: 8px; }
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .icon-btn:hover { background: #e5e7eb; }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .table th, .table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        .table th {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #666;
+            font-weight: 600;
+        }
+        .table tr:hover { background: #f9fafb; }
+        .chat-test-container {
+            display: flex;
+            gap: 20px;
+        }
+        .chat-test-container .panel { flex: 1; }
+        .chat-window {
+            height: 400px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            line-height: 1.4;
+        }
+        .chat-message.user {
+            background: #667eea;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .chat-message.bot {
+            background: #e5e7eb;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .chat-message .confidence {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+        .chat-input-container {
+            padding: 12px;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input-container input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+        .chat-input-container input:focus { border-color: #667eea; }
+        .training-progress {
+            background: #f3f4f6;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+        }
+        .training-progress .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        .tab-btn {
+            padding: 12px 20px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover { color: #333; }
+        .tab-btn.active { color: #667eea; border-bottom-color: #667eea; }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+        #toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 16px 24px;
+            background: #333;
+            color: white;
+            border-radius: 8px;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        #toast.success { background: #22c55e; }
+        #toast.error { background: #ef4444; }
+        .loading { opacity: 0.6; pointer-events: none; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .response-editor {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Monaco', 'Menlo', monospace;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.6;
+            min-height: 200px;
+            white-space: pre-wrap;
+        }
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal h3 { margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h1>🤖 Chatbot Admin</h1>
+        <nav>
+            <a href="#" class="active" data-section="dashboard">📊 Dashboard</a>
+            <a href="#" data-section="config">⚙️ Configuration</a>
+            <a href="#" data-section="training">🎓 Training</a>
+            <a href="#" data-section="intents">🏷️ Intents</a>
+            <a href="#" data-section="responses">💬 Responses</a>
+            <a href="#" data-section="test">🧪 Test Chat</a>
+            <a href="#" data-section="conversations">📝 Conversations</a>
+            <a href="#" data-section="analytics">📈 Analytics</a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <!-- Dashboard Section -->
+        <div id="section-dashboard" class="section active">
+            <div class="header">
+                <h2>Dashboard</h2>
+                <span class="status-badge success" id="bot-status">Bot Online</span>
+            </div>
+            <div class="cards">
+                <div class="card">
+                    <h3>Total Conversations</h3>
+                    <div class="value" id="stat-conversations">--</div>
+                    <div class="change">Today</div>
+                </div>
+                <div class="card">
+                    <h3>Messages Processed</h3>
+                    <div class="value" id="stat-messages">--</div>
+                    <div class="change">Last 24 hours</div>
+                </div>
+                <div class="card">
+                    <h3>Active Model</h3>
+                    <div class="value" id="stat-model" style="font-size: 16px; word-break: break-all;">--</div>
+                    <div class="change" id="stat-model-date">--</div>
+                </div>
+                <div class="card">
+                    <h3>Intents Trained</h3>
+                    <div class="value" id="stat-intents">--</div>
+                    <div class="change">In current model</div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>📡 Quick Actions</h3>
+                <div class="btn-group">
+                    <button class="btn" onclick="showSection('test')">🧪 Test Chatbot</button>
+                    <button class="btn btn-secondary" onclick="showSection('training')">🎓 Manage Training</button>
+                    <button class="btn btn-success" onclick="trainModel()">🚀 Train Model</button>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>🕐 Recent Activity</h3>
+                <div id="recent-activity" class="conversation-list">
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <p>No recent activity</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configuration Section -->
+        <div id="section-config" class="section">
+            <div class="header">
+                <h2>Bot Configuration</h2>
+            </div>
+            <div class="panel">
+                <h3>⚙️ General Settings</h3>
+                <form id="config-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Bot Name</label>
+                            <input type="text" id="cfg-bot-name" value="Assistant">
+                        </div>
+                        <div class="form-group">
+                            <label>Business Name</label>
+                            <input type="text" id="cfg-business-name" value="Example Business">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Welcome Message</label>
+                        <textarea id="cfg-welcome">Hello! 👋 How can I help you today?</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Fallback Message (when bot doesn't understand)</label>
+                        <textarea id="cfg-fallback">I'm not sure I understood. Could you rephrase that?</textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Contact Email</label>
+                            <input type="email" id="cfg-email" value="support@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Phone</label>
+                            <input type="text" id="cfg-phone" value="(555) 123-4567">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Business Hours Start</label>
+                            <input type="time" id="cfg-hours-start" value="09:00">
+                        </div>
+                        <div class="form-group">
+                            <label>Business Hours End</label>
+                            <input type="time" id="cfg-hours-end" value="18:00">
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" class="btn">💾 Save Configuration</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Training Section -->
+        <div id="section-training" class="section">
+            <div class="header">
+                <h2>Training Management</h2>
+                <button class="btn btn-success" onclick="trainModel()">🚀 Train Model</button>
+            </div>
+            
+            <div id="training-status" class="panel" style="display: none;">
+                <div class="training-progress">
+                    <div class="spinner"></div>
+                    <h3>Training in Progress...</h3>
+                    <p>This may take a few minutes. Please wait.</p>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>➕ Add Training Examples</h3>
+                <p style="color: #666; margin-bottom: 16px;">Add new examples to help the bot understand user messages better.</p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Select Intent</label>
+                        <select id="train-intent">
+                            <option value="">-- Select an intent --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Or Create New Intent</label>
+                        <input type="text" id="train-new-intent" placeholder="e.g., ask_refund_policy">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Training Example</label>
+                    <input type="text" id="train-example" placeholder="e.g., What is your refund policy?">
+                </div>
+                <button class="btn" onclick="addTrainingExample()">➕ Add Example</button>
+            </div>
+
+            <div class="panel">
+                <h3>📋 Pending Training Examples</h3>
+                <p style="color: #666; margin-bottom: 16px;">These examples will be added when you train the model.</p>
+                <div id="pending-examples">
+                    <div class="empty-state">
+                        <div class="icon">📝</div>
+                        <p>No pending examples. Add some above!</p>
+                    </div>
+                </div>
+                <div class="btn-group" id="pending-actions" style="display: none;">
+                    <button class="btn btn-success" onclick="savePendingExamples()">💾 Save to Training Data</button>
+                    <button class="btn btn-danger" onclick="clearPendingExamples()">🗑️ Clear All</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>📊 Model Information</h3>
+                <table class="table">
+                    <tr>
+                        <td><strong>Current Model</strong></td>
+                        <td id="model-name">Loading...</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Last Trained</strong></td>
+                        <td id="model-date">Loading...</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status</strong></td>
+                        <td><span class="status-badge success">Active</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Intents Section -->
+        <div id="section-intents" class="section">
+            <div class="header">
+                <h2>Intent Management</h2>
+                <button class="btn" onclick="showAddIntentModal()">➕ Add Intent</button>
+            </div>
+            <div class="panel">
+                <h3>🏷️ All Intents</h3>
+                <p style="color: #666; margin-bottom: 16px;">Click on an intent to view and edit its training examples.</p>
+                <div id="intents-list">
+                    <div class="empty-state">
+                        <div class="icon">🏷️</div>
+                        <p>Loading intents...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Responses Section -->
+        <div id="section-responses" class="section">
+            <div class="header">
+                <h2>Response Management</h2>
+                <button class="btn" onclick="showAddResponseModal()">➕ Add Response</button>
+            </div>
+            <div class="panel">
+                <h3>💬 Bot Responses</h3>
+                <p style="color: #666; margin-bottom: 16px;">Edit what the bot says for each response action.</p>
+                <div id="responses-list">
+                    <div class="empty-state">
+                        <div class="icon">💬</div>
+                        <p>Loading responses...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Chat Section -->
+        <div id="section-test" class="section">
+            <div class="header">
+                <h2>Test Chatbot</h2>
+                <button class="btn btn-secondary" onclick="clearTestChat()">🗑️ Clear Chat</button>
+            </div>
+            <div class="chat-test-container">
+                <div class="panel" style="flex: 2;">
+                    <h3>💬 Chat Window</h3>
+                    <div class="chat-window">
+                        <div class="chat-messages" id="test-chat-messages">
+                            <div class="chat-message bot">
+                                Hello! I'm your chatbot. Type a message to test me!
+                            </div>
+                        </div>
+                        <div class="chat-input-container">
+                            <input type="text" id="test-chat-input" placeholder="Type a message..." onkeypress="handleTestChatKeypress(event)">
+                            <button class="btn" onclick="sendTestMessage()">Send</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel" style="flex: 1;">
+                    <h3>🔍 Last Response Details</h3>
+                    <div id="response-details">
+                        <p style="color: #666;">Send a message to see response details.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Conversations Section -->
+        <div id="section-conversations" class="section">
+            <div class="header">
+                <h2>Conversation History</h2>
+            </div>
+            <div class="panel">
+                <h3>📝 Recent Conversations</h3>
+                <div id="conversations-list" class="conversation-list">
+                    <div class="empty-state">
+                        <div class="icon">📝</div>
+                        <p>Loading conversations...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Section -->
+        <div id="section-analytics" class="section">
+            <div class="header">
+                <h2>Analytics</h2>
+            </div>
+            <div class="cards">
+                <div class="card">
+                    <h3>Top Intents</h3>
+                    <div id="analytics-top-intents">
+                        <p style="color: #666;">Loading...</p>
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Low Confidence Messages</h3>
+                    <div id="analytics-low-confidence">
+                        <p style="color: #666;">Loading...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <h3>📊 Intent Distribution</h3>
+                <div id="intent-distribution">
+                    <p style="color: #666;">Analytics data will appear here after conversations are logged.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Intent Modal -->
+    <div class="modal-overlay" id="modal-add-intent">
+        <div class="modal">
+            <h3>Add New Intent</h3>
+            <div class="form-group">
+                <label>Intent Name</label>
+                <input type="text" id="new-intent-name" placeholder="e.g., ask_shipping_info">
+            </div>
+            <div class="form-group">
+                <label>Training Examples (one per line)</label>
+                <textarea id="new-intent-examples" rows="6" placeholder="How long does shipping take?&#10;What are shipping costs?&#10;Do you ship internationally?"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('modal-add-intent')">Cancel</button>
+                <button class="btn" onclick="createNewIntent()">Create Intent</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Response Modal -->
+    <div class="modal-overlay" id="modal-add-response">
+        <div class="modal">
+            <h3>Add/Edit Response</h3>
+            <div class="form-group">
+                <label>Response Name</label>
+                <input type="text" id="new-response-name" placeholder="e.g., utter_shipping_info">
+            </div>
+            <div class="form-group">
+                <label>Response Text (add multiple variations, one per line)</label>
+                <textarea id="new-response-text" rows="6" placeholder="We ship within 3-5 business days.&#10;Standard shipping takes 3-5 days."></textarea>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('modal-add-response')">Cancel</button>
+                <button class="btn" onclick="saveResponse()">Save Response</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast"></div>
+
+    <script>
+        // =============================================================================
+        // CONFIGURATION
+        // =============================================================================
+        const RASA_URL = 'http://localhost:5005';
+        const ADMIN_URL = 'http://localhost:8080';
+        const USER_ID = 'admin_' + Math.random().toString(36).substr(2, 9);
+
+        // =============================================================================
+        // STATE
+        // =============================================================================
+        let pendingExamples = [];
+        let currentIntents = [];
+        let currentResponses = {};
+        let isTraining = false;
+
+        // =============================================================================
+        // NAVIGATION
+        // =============================================================================
+        document.querySelectorAll('.sidebar nav a').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = link.dataset.section;
+                showSection(section);
+            });
+        });
+
+        function showSection(sectionId) {
+            // Update nav
+            document.querySelectorAll('.sidebar nav a').forEach(a => a.classList.remove('active'));
+            document.querySelector(`[data-section="${sectionId}"]`).classList.add('active');
+            
+            // Update content
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById('section-' + sectionId).classList.add('active');
+
+            // Load section-specific data
+            switch(sectionId) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'intents':
+                    loadIntents();
+                    break;
+                case 'responses':
+                    loadResponses();
+                    break;
+                case 'conversations':
+                    loadConversations();
+                    break;
+                case 'training':
+                    loadModelInfo();
+                    loadIntentsForDropdown();
+                    break;
+            }
+        }
+
+        // =============================================================================
+        // TOAST NOTIFICATIONS
+        // =============================================================================
+        function showToast(message, type = 'info', duration = 3000) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = type;
+            toast.style.display = 'block';
+            setTimeout(() => toast.style.display = 'none', duration);
+        }
+
+        // =============================================================================
+        // MODAL MANAGEMENT
+        // =============================================================================
+        function showAddIntentModal() {
+            document.getElementById('modal-add-intent').classList.add('active');
+        }
+
+        function showAddResponseModal() {
+            document.getElementById('modal-add-response').classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Close modal on outside click
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // =============================================================================
+        // DASHBOARD
+        // =============================================================================
+        async function loadDashboardData() {
+            try {
+                // Get RASA status
+                const statusRes = await fetch(`${RASA_URL}/status`);
+                if (statusRes.ok) {
+                    const status = await statusRes.json();
+                    document.getElementById('stat-model').textContent = status.model_file || 'No model';
+                    document.getElementById('stat-model-date').textContent = 'Loaded and running';
+                    document.getElementById('bot-status').innerHTML = 'Bot Online';
+                    document.getElementById('bot-status').className = 'status-badge success';
+                }
+            } catch (error) {
+                document.getElementById('bot-status').innerHTML = 'Bot Offline';
+                document.getElementById('bot-status').className = 'status-badge error';
+            }
+
+            // Load intents count from RASA domain
+            try {
+                const domainRes = await fetch(`${RASA_URL}/domain`);
+                if (domainRes.ok) {
+                    const domain = await domainRes.json();
+                    document.getElementById('stat-intents').textContent = domain.intents?.length || '--';
+                    currentIntents = domain.intents || [];
+                    currentResponses = domain.responses || {};
+                }
+            } catch (error) {
+                console.error('Error loading domain:', error);
+            }
+
+            // Placeholder stats
+            document.getElementById('stat-conversations').textContent = '0';
+            document.getElementById('stat-messages').textContent = '0';
+        }
+
+        // =============================================================================
+        // TRAINING MANAGEMENT
+        // =============================================================================
+        function loadIntentsForDropdown() {
+            const select = document.getElementById('train-intent');
+            select.innerHTML = '<option value="">-- Select an intent --</option>';
+            
+            currentIntents.forEach(intent => {
+                const option = document.createElement('option');
+                option.value = intent;
+                option.textContent = intent;
+                select.appendChild(option);
+            });
+        }
+
+        function addTrainingExample() {
+            let intent = document.getElementById('train-intent').value;
+            const newIntent = document.getElementById('train-new-intent').value.trim();
+            const example = document.getElementById('train-example').value.trim();
+
+            if (newIntent) {
+                intent = newIntent.toLowerCase().replace(/\s+/g, '_');
+            }
+
+            if (!intent) {
+                showToast('Please select or enter an intent', 'error');
+                return;
+            }
+
+            if (!example) {
+                showToast('Please enter a training example', 'error');
+                return;
+            }
+
+            pendingExamples.push({ intent, example });
+            updatePendingExamplesUI();
+            
+            // Clear inputs
+            document.getElementById('train-example').value = '';
+            document.getElementById('train-new-intent').value = '';
+            
+            showToast('Example added to queue', 'success');
+        }
+
+        function updatePendingExamplesUI() {
+            const container = document.getElementById('pending-examples');
+            const actions = document.getElementById('pending-actions');
+
+            if (pendingExamples.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📝</div>
+                        <p>No pending examples. Add some above!</p>
+                    </div>
+                `;
+                actions.style.display = 'none';
+                return;
+            }
+
+            actions.style.display = 'flex';
+            container.innerHTML = pendingExamples.map((ex, i) => `
+                <div class="example-item">
+                    <div class="text">
+                        <div class="intent">${ex.intent}</div>
+                        <div class="example-text">"${ex.example}"</div>
+                    </div>
+                    <div class="actions">
+                        <button class="icon-btn" onclick="removePendingExample(${i})" title="Remove">❌</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removePendingExample(index) {
+            pendingExamples.splice(index, 1);
+            updatePendingExamplesUI();
+        }
+
+        function clearPendingExamples() {
+            pendingExamples = [];
+            updatePendingExamplesUI();
+            showToast('Cleared all pending examples', 'success');
+        }
+
+        async function savePendingExamples() {
+            if (pendingExamples.length === 0) {
+                showToast('No examples to save', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/training/examples`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ examples: pendingExamples })
+                });
+
+                if (response.ok) {
+                    showToast('Examples saved to training data!', 'success');
+                    pendingExamples = [];
+                    updatePendingExamplesUI();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (error) {
+                showToast('Error saving examples. Try again.', 'error');
+            }
+        }
+
+        async function trainModel() {
+            if (isTraining) {
+                showToast('Training already in progress', 'warning');
+                return;
+            }
+
+            isTraining = true;
+            document.getElementById('training-status').style.display = 'block';
+            showToast('Starting model training...', 'info');
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/training/train`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    showToast('Training completed successfully!', 'success');
+                    loadModelInfo();
+                } else {
+                    throw new Error('Training failed');
+                }
+            } catch (error) {
+                showToast('Training failed. Check server logs.', 'error');
+            } finally {
+                isTraining = false;
+                document.getElementById('training-status').style.display = 'none';
+            }
+        }
+
+        async function loadModelInfo() {
+            try {
+                const statusRes = await fetch(`${RASA_URL}/status`);
+                if (statusRes.ok) {
+                    const status = await statusRes.json();
+                    document.getElementById('model-name').textContent = status.model_file || 'No model loaded';
+                    document.getElementById('model-date').textContent = 'Active';
+                }
+            } catch (error) {
+                document.getElementById('model-name').textContent = 'Error loading';
+            }
+        }
+
+        // =============================================================================
+        // INTENTS MANAGEMENT
+        // =============================================================================
+        async function loadIntents() {
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/training/intents`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayIntents(data.intents);
+                } else {
+                    // Fallback to RASA domain
+                    const domainRes = await fetch(`${RASA_URL}/domain`);
+                    const domain = await domainRes.json();
+                    displayIntents(domain.intents?.map(name => ({ name, examples: [] })) || []);
+                }
+            } catch (error) {
+                // Use cached intents
+                displayIntents(currentIntents.map(name => ({ name, examples: [] })));
+            }
+        }
+
+        function displayIntents(intents) {
+            const container = document.getElementById('intents-list');
+            
+            if (!intents || intents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🏷️</div>
+                        <p>No intents found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = intents.map(intent => {
+                const name = typeof intent === 'string' ? intent : intent.name;
+                const examples = intent.examples || [];
+                return `
+                    <div class="example-item" style="cursor: pointer;" onclick="showIntentDetails('${name}')">
+                        <div class="text">
+                            <div class="intent">${name}</div>
+                            <div class="example-text" style="color: #666;">${examples.length} examples</div>
+                        </div>
+                        <div class="actions">
+                            <button class="icon-btn" title="Edit">✏️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function createNewIntent() {
+            const name = document.getElementById('new-intent-name').value.trim().toLowerCase().replace(/\s+/g, '_');
+            const examplesText = document.getElementById('new-intent-examples').value.trim();
+            const examples = examplesText.split('\n').filter(e => e.trim());
+
+            if (!name) {
+                showToast('Please enter an intent name', 'error');
+                return;
+            }
+
+            if (examples.length === 0) {
+                showToast('Please add at least one example', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/training/intents`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, examples })
+                });
+
+                if (response.ok) {
+                    showToast('Intent created! Train model to apply.', 'success');
+                    closeModal('modal-add-intent');
+                    loadIntents();
+                } else {
+                    throw new Error('Failed to create');
+                }
+            } catch (error) {
+                showToast('Error creating intent', 'error');
+            }
+        }
+
+        function showIntentDetails(intentName) {
+            showToast(`Viewing intent: ${intentName}`, 'info');
+            // Could open a modal with full details
+        }
+
+        // =============================================================================
+        // RESPONSES MANAGEMENT
+        // =============================================================================
+        async function loadResponses() {
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/training/responses`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayResponses(data.responses);
+                } else {
+                    // Fallback to cached
+                    displayResponses(currentResponses);
+                }
+            } catch (error) {
+                displayResponses(currentResponses);
+            }
+        }
+
+        function displayResponses(responses) {
+            const container = document.getElementById('responses-list');
+            const responseNames = Object.keys(responses);
+
+            if (responseNames.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">💬</div>
+                        <p>No responses found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = responseNames.map(name => {
+                const texts = responses[name] || [];
+                const preview = texts[0]?.text?.substring(0, 80) || 'No text';
+                return `
+                    <div class="example-item">
+                        <div class="text">
+                            <div class="intent">${name}</div>
+                            <div class="example-text" style="color: #666;">${preview}${preview.length >= 80 ? '...' : ''}</div>
+                        </div>
+                        <div class="actions">
+                            <button class="icon-btn" onclick="editResponse('${name}')" title="Edit">✏️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function editResponse(name) {
+            document.getElementById('new-response-name').value = name;
+            const texts = currentResponses[name]?.map(r => r.text).join('\n') || '';
+            document.getElementById('new-response-text').value = texts;
+            showAddResponseModal();
+        }
+
+        async function saveResponse() {
+            const name = document.getElementById('new-response-name').value.trim();
+            const textsRaw = document.getElementById('new-response-text').value.trim();
+            const texts = textsRaw.split('\n').filter(t => t.trim());
+
+            if (!name) {
+                showToast('Please enter a response name', 'error');
+                return;
+            }
+
+            if (texts.length === 0) {
+                showToast('Please add at least one response text', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/training/responses`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, texts })
+                });
+
+                if (response.ok) {
+                    showToast('Response saved! Train model to apply.', 'success');
+                    closeModal('modal-add-response');
+                    loadResponses();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (error) {
+                showToast('Error saving response', 'error');
+            }
+        }
+
+        // =============================================================================
+        // TEST CHAT
+        // =============================================================================
+        function handleTestChatKeypress(event) {
+            if (event.key === 'Enter') {
+                sendTestMessage();
+            }
+        }
+
+        async function sendTestMessage() {
+            const input = document.getElementById('test-chat-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message to chat
+            addChatMessage(message, 'user');
+            input.value = '';
+
+            try {
+                // Get intent classification
+                const parseRes = await fetch(`${RASA_URL}/model/parse`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: message })
+                });
+                const parseData = await parseRes.json();
+
+                // Get bot response
+                const response = await fetch(`${RASA_URL}/webhooks/rest/webhook`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender: USER_ID, message })
+                });
+                const data = await response.json();
+
+                // Display bot responses
+                if (data.length === 0) {
+                    addChatMessage("I didn't understand that.", 'bot');
+                } else {
+                    data.forEach(msg => {
+                        if (msg.text) {
+                            addChatMessage(msg.text, 'bot');
+                        }
+                    });
+                }
+
+                // Update response details
+                updateResponseDetails(parseData);
+
+            } catch (error) {
+                addChatMessage("Error: Could not connect to the bot.", 'bot');
+            }
+        }
+
+        function addChatMessage(text, type) {
+            const container = document.getElementById('test-chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `chat-message ${type}`;
+            msgDiv.textContent = text;
+            container.appendChild(msgDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function updateResponseDetails(parseData) {
+            const container = document.getElementById('response-details');
+            const intent = parseData.intent || {};
+            const entities = parseData.entities || [];
+            const ranking = parseData.intent_ranking?.slice(0, 5) || [];
+
+            container.innerHTML = `
+                <p><strong>Detected Intent:</strong></p>
+                <p><span class="intent-tag">${intent.name || 'unknown'}</span></p>
+                <p><strong>Confidence:</strong> ${((intent.confidence || 0) * 100).toFixed(1)}%</p>
+                
+                ${entities.length > 0 ? `
+                    <p style="margin-top: 12px;"><strong>Entities:</strong></p>
+                    ${entities.map(e => `<span class="intent-tag">${e.entity}: ${e.value}</span>`).join(' ')}
+                ` : ''}
+                
+                <p style="margin-top: 12px;"><strong>Intent Ranking:</strong></p>
+                <div style="font-size: 12px; color: #666;">
+                    ${ranking.map(r => `
+                        <div>${r.name}: ${(r.confidence * 100).toFixed(1)}%</div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function clearTestChat() {
+            document.getElementById('test-chat-messages').innerHTML = `
+                <div class="chat-message bot">
+                    Hello! I'm your chatbot. Type a message to test me!
+                </div>
+            `;
+            document.getElementById('response-details').innerHTML = `
+                <p style="color: #666;">Send a message to see response details.</p>
+            `;
+        }
+
+        // =============================================================================
+        // CONVERSATIONS
+        // =============================================================================
+        async function loadConversations() {
+            const container = document.getElementById('conversations-list');
+            
+            try {
+                const response = await fetch(`${RASA_URL}/conversations/${USER_ID}/tracker`);
+                if (response.ok) {
+                    const data = await response.json();
+                    const events = data.events?.filter(e => e.event === 'user' || e.event === 'bot') || [];
+                    
+                    if (events.length === 0) {
+                        container.innerHTML = `
+                            <div class="empty-state">
+                                <div class="icon">📝</div>
+                                <p>No conversations yet. Test the bot to see history.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    container.innerHTML = events.slice(-20).map(event => {
+                        const isUser = event.event === 'user';
+                        const time = event.timestamp ? new Date(event.timestamp * 1000).toLocaleString() : '';
+                        return `
+                            <div class="conversation-item">
+                                <div class="${isUser ? 'user' : 'bot'}">${isUser ? '👤 User' : '🤖 Bot'}</div>
+                                <div class="preview">${event.text || event.data?.text || 'No text'}</div>
+                                <div class="meta">
+                                    <span>${time}</span>
+                                    ${isUser && event.parse_data?.intent ? `<span>Intent: ${event.parse_data.intent.name}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (error) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">⚠️</div>
+                        <p>Could not load conversations</p>
+                    </div>
+                `;
+            }
+        }
+
+        // =============================================================================
+        // CONFIGURATION
+        // =============================================================================
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const config = {
+                bot_name: document.getElementById('cfg-bot-name').value,
+                business_name: document.getElementById('cfg-business-name').value,
+                welcome_message: document.getElementById('cfg-welcome').value,
+                fallback_message: document.getElementById('cfg-fallback').value,
+                contact_email: document.getElementById('cfg-email').value,
+                contact_phone: document.getElementById('cfg-phone').value,
+                business_hours: {
+                    start: document.getElementById('cfg-hours-start').value,
+                    end: document.getElementById('cfg-hours-end').value
+                }
+            };
+
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/admin/config/bot`, {
+                    method: 'PUT',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin'
+                    },
+                    body: JSON.stringify(config)
+                });
+
+                if (response.ok) {
+                    showToast('Configuration saved!', 'success');
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (error) {
+                showToast('Error saving configuration', 'error');
+            }
+        });
+
+        // =============================================================================
+        // INITIALIZATION
+        // =============================================================================
+        loadDashboardData();
+    </script>
+</body>
+</html>

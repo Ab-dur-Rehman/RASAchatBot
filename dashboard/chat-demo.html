@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Widget Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .demo-content {
+            max-width: 800px;
+            margin: 0 auto;
+            color: white;
+        }
+        h1 { margin-bottom: 20px; }
+        p { opacity: 0.9; line-height: 1.6; }
+        .code-block {
+            background: rgba(0,0,0,0.3);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        code { color: #a5d6ff; }
+    </style>
+</head>
+<body>
+    <div class="demo-content">
+        <h1>🤖 Chat Widget Demo</h1>
+        <p>This page demonstrates the embedded chat widget. Click the chat button in the bottom-right corner to test!</p>
+        
+        <h2>How to Add to Your Website</h2>
+        <p>Copy and paste this code before the closing <code>&lt;/body&gt;</code> tag:</p>
+        
+        <div class="code-block">
+            <code>&lt;script src="chatbot-widget.js"&gt;&lt;/script&gt;</code>
+        </div>
+        
+        <p>Or include the full widget directly:</p>
+        
+        <div class="code-block">
+            <code>&lt;script&gt;<br>
+            &nbsp;&nbsp;// Configure your RASA server URL<br>
+            &nbsp;&nbsp;window.CHATBOT_CONFIG = {<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;serverUrl: 'http://localhost:5005',<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;title: 'Chat Support',<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;subtitle: 'We usually reply instantly',<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;primaryColor: '#667eea'<br>
+            &nbsp;&nbsp;};<br>
+            &lt;/script&gt;<br>
+            &lt;script src="chatbot-widget.js"&gt;&lt;/script&gt;</code>
+        </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <script>
+        window.CHATBOT_CONFIG = {
+            serverUrl: 'http://localhost:5005',
+            title: 'Chat Support',
+            subtitle: 'We usually reply instantly',
+            primaryColor: '#667eea'
+        };
+    </script>
+    <script src="chatbot-widget.js"></script>
+</body>
+</html>

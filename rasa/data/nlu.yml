@@ -1,654 +1,202 @@
-# =============================================================================
-# NLU TRAINING DATA
-# =============================================================================
-# Training examples for intent classification and entity extraction
-# Each intent should have 10-20+ examples for good generalization
-# =============================================================================
-
 version: "3.1"
 
 nlu:
-
 # =============================================================================
-# CONVERSATIONAL INTENTS
+# GREETINGS & CHITCHAT
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# Greetings
-# -----------------------------------------------------------------------------
 - intent: greet
   examples: |
     - hey
     - hello
     - hi
-    - hi there
-    - hello there
     - good morning
     - good evening
     - good afternoon
     - hey there
-    - greetings
-    - howdy
-    - hi bot
-    - hello bot
-    - hey bot
-    - what's up
-    - yo
-    - hiya
+    - hi there
+    - hello there
     - heya
-    - sup
-    - hello!
 
-# -----------------------------------------------------------------------------
-# Goodbyes
-# -----------------------------------------------------------------------------
 - intent: goodbye
   examples: |
     - bye
     - goodbye
-    - bye bye
-    - see you later
     - see ya
+    - see you later
+    - have a nice day
+    - bye bye
     - take care
-    - have a good day
     - catch you later
-    - cya
-    - gotta go
-    - talk to you later
-    - ttyl
-    - until next time
-    - good night
-    - see you soon
-    - I'm done
-    - that's all
-    - that's all I needed
-    - thanks bye
-    - ok bye
+    - see you
+    - I'm leaving
 
-# -----------------------------------------------------------------------------
-# Thank You
-# -----------------------------------------------------------------------------
 - intent: thank_you
   examples: |
-    - thank you
     - thanks
-    - thanks a lot
+    - thank you
     - thank you so much
-    - thanks so much
-    - much appreciated
-    - thank you for your help
-    - thanks for helping
-    - I appreciate it
+    - thanks a lot
+    - thanks a bunch
+    - appreciate it
     - that's helpful
-    - thanks for the information
-    - thanks for the info
-    - cheers
-    - ty
-    - thx
-    - great thanks
-    - perfect thanks
-    - wonderful thank you
-    - awesome thanks
-    - thanks!
+    - many thanks
+    - thanks for your help
 
-# -----------------------------------------------------------------------------
-# Affirmations
-# -----------------------------------------------------------------------------
 - intent: affirm
   examples: |
     - yes
+    - yes please
     - yeah
     - yep
-    - yes please
-    - correct
-    - that's right
-    - exactly
     - sure
-    - absolutely
-    - definitely
-    - of course
-    - sounds good
-    - perfect
-    - that works
     - ok
     - okay
-    - alright
+    - sounds good
+    - that works
+    - correct
     - right
-    - yup
-    - yes that's correct
-    - confirm
-    - I confirm
-    - that's correct
-    - yes I want to proceed
-    - go ahead
-    - please proceed
+    - exactly
 
-# -----------------------------------------------------------------------------
-# Denials
-# -----------------------------------------------------------------------------
 - intent: deny
   examples: |
     - no
-    - nope
     - no thanks
+    - nope
     - not really
     - I don't think so
-    - that's not right
-    - incorrect
-    - wrong
     - no way
-    - nah
     - never
-    - I don't want that
     - not interested
-    - cancel that
-    - nevermind
-    - forget it
-    - no I changed my mind
-    - actually no
-    - stop
-    - don't do that
-    - that's wrong
-    - not correct
 
-# -----------------------------------------------------------------------------
-# Bot Challenge
-# -----------------------------------------------------------------------------
 - intent: bot_challenge
   examples: |
-    - are you a bot
-    - are you a robot
-    - am I talking to a bot
-    - am I talking to a human
-    - are you real
-    - are you a person
-    - are you human
-    - is this a chatbot
-    - is this automated
-    - who am I talking to
-    - what are you
-    - are you AI
-    - are you an AI
-    - are you artificial intelligence
+    - are you a bot?
+    - are you human?
+    - am I talking to a bot?
+    - am I talking to a human?
+    - are you real?
+    - are you a robot?
 
-# -----------------------------------------------------------------------------
-# Mood - Great
-# -----------------------------------------------------------------------------
 - intent: mood_great
   examples: |
+    - I'm doing great
     - I'm good
-    - I'm great
-    - I'm doing well
-    - I'm fine
-    - doing great
-    - feeling good
+    - doing well
+    - feeling great
+    - I feel good
     - wonderful
     - amazing
     - excellent
     - fantastic
-    - very well
-    - couldn't be better
-    - pretty good
-    - all good
-    - I'm okay
+    - perfect
 
-# -----------------------------------------------------------------------------
-# Mood - Unhappy
-# -----------------------------------------------------------------------------
 - intent: mood_unhappy
   examples: |
     - I'm sad
     - I'm not happy
-    - I'm frustrated
-    - this is frustrating
-    - I'm upset
+    - not so good
     - not great
-    - not good
-    - I'm having a bad day
+    - feeling down
+    - I'm frustrated
     - terrible
     - awful
-    - this isn't working
-    - I'm disappointed
-    - this is annoying
 
 # =============================================================================
-# BUSINESS INFORMATION Q&A INTENTS
+# BUSINESS Q&A
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# General Business Info
-# -----------------------------------------------------------------------------
+- intent: ask_hours
+  examples: |
+    - what are your hours?
+    - when are you open?
+    - what time do you open?
+    - what time do you close?
+    - business hours
+    - opening hours
+    - are you open today?
+    - are you open on weekends?
+    - what days are you open?
+
+- intent: ask_pricing
+  examples: |
+    - how much do you charge?
+    - what are your prices?
+    - pricing information
+    - how much does it cost?
+    - what's the cost?
+    - do you have a price list?
+    - what are the rates?
+    - how much for a consultation?
+
+- intent: ask_location
+  examples: |
+    - where are you located?
+    - what's your address?
+    - where is your office?
+    - how do I get there?
+    - where can I find you?
+    - your location please
+    - give me directions
+
+- intent: ask_services
+  examples: |
+    - what services do you offer?
+    - what do you do?
+    - what can you help me with?
+    - tell me about your services
+    - what services are available?
+    - what kind of services?
+    - list your services
+
+- intent: ask_policy
+  examples: |
+    - what's your refund policy?
+    - cancellation policy
+    - what's your privacy policy?
+    - do you have a return policy?
+    - what are your policies?
+    - terms and conditions
+
+- intent: ask_contact
+  examples: |
+    - how can I contact you?
+    - what's your email?
+    - phone number please
+    - contact information
+    - how do I reach you?
+    - give me your contact details
+    - can I call you?
+
 - intent: ask_business_info
   examples: |
     - tell me about your company
-    - what do you do
-    - what is your business
-    - can you tell me about yourselves
-    - what does your company do
-    - I want to know more about you
-    - tell me about your business
-    - what services do you provide
-    - give me information about your company
-    - who are you
-    - describe your business
-    - what's your company about
-    - tell me more
-    - I'd like to learn about your company
-    - what kind of company is this
-    - what industry are you in
+    - who are you?
+    - what does your company do?
+    - about your business
+    - company information
+    - what is this company?
 
-# -----------------------------------------------------------------------------
-# Pricing Questions
-# -----------------------------------------------------------------------------
-- intent: ask_pricing
-  examples: |
-    - how much does it cost
-    - what are your prices
-    - what's the pricing
-    - how much do you charge
-    - what are your rates
-    - can you tell me the cost
-    - what's the price of [consultation](service_type)
-    - how much for a [demo](service_type)
-    - what does [support](service_type) cost
-    - pricing information
-    - price list
-    - do you have a price list
-    - what's your pricing model
-    - is there a free option
-    - do you offer free trials
-    - how much is the monthly fee
-    - what are the fees
-    - is it expensive
-    - do you have any discounts
-    - are there any promotions
-
-# -----------------------------------------------------------------------------
-# Business Hours
-# -----------------------------------------------------------------------------
-- intent: ask_hours
-  examples: |
-    - what are your hours
-    - what are your business hours
-    - when are you open
-    - what time do you open
-    - what time do you close
-    - are you open on weekends
-    - are you open on Saturday
-    - are you open on Sunday
-    - are you open today
-    - are you open now
-    - what are your operating hours
-    - opening hours
-    - closing time
-    - when can I visit
-    - when can I call
-    - do you work on holidays
-    - are you open on [Monday](date)
-    - what hours are you available
-
-# -----------------------------------------------------------------------------
-# Location Questions
-# -----------------------------------------------------------------------------
-- intent: ask_location
-  examples: |
-    - where are you located
-    - what's your address
-    - where is your office
-    - how do I get there
-    - where can I find you
-    - what's your location
-    - do you have a physical location
-    - where is your store
-    - give me directions
-    - what city are you in
-    - are you near [downtown](location)
-    - do you have parking
-    - are you accessible by public transit
-
-# -----------------------------------------------------------------------------
-# Policy Questions
-# -----------------------------------------------------------------------------
-- intent: ask_policy
-  examples: |
-    - what is your refund policy
-    - what is your cancellation policy
-    - do you have a privacy policy
-    - what's your return policy
-    - can I get a refund
-    - how do I cancel
-    - what are your terms and conditions
-    - what's your warranty policy
-    - do you offer guarantees
-    - what if I'm not satisfied
-    - can I return it
-    - how long do I have to cancel
-    - what's the [refund](policy_type) policy
-    - tell me about your [cancellation](policy_type) policy
-    - what are your [privacy](policy_type) terms
-    - is there a money back guarantee
-
-# -----------------------------------------------------------------------------
-# Services Questions
-# -----------------------------------------------------------------------------
-- intent: ask_services
-  examples: |
-    - what services do you offer
-    - what do you provide
-    - what can you help me with
-    - list your services
-    - show me your services
-    - what kind of services
-    - do you offer [consultation](service_type)
-    - do you have [support](service_type) services
-    - what types of services are available
-    - tell me about your offerings
-    - what products do you have
-    - do you offer [demos](service_type)
-    - what solutions do you provide
-
-# -----------------------------------------------------------------------------
-# FAQ Questions
-# -----------------------------------------------------------------------------
 - intent: ask_faq
   examples: |
-    - I have a question
     - frequently asked questions
     - FAQ
     - common questions
-    - can you answer some questions
-    - I need some information
-    - help me understand
-    - how does this work
-    - explain how it works
-    - what should I know
-    - general questions
-    - quick question
+    - what do people usually ask?
+    - help
+    - I need help
 
-# -----------------------------------------------------------------------------
-# Contact Questions
-# -----------------------------------------------------------------------------
-- intent: ask_contact
-  examples: |
-    - how can I contact you
-    - what's your email
-    - what's your phone number
-    - how do I reach you
-    - contact information
-    - I need to speak to someone
-    - can I call you
-    - do you have a phone number
-    - what's the best way to contact you
-    - email address
-    - can I email you
-    - how do I get in touch
-    - customer service number
-    - support email
-
-# =============================================================================
-# BOOKING & SCHEDULING INTENTS
-# =============================================================================
-
-# -----------------------------------------------------------------------------
-# Book Service
-# -----------------------------------------------------------------------------
-- intent: book_service
-  examples: |
-    - I want to book an appointment
-    - I'd like to schedule an appointment
-    - can I book a [consultation](service_type)
-    - book a [demo](service_type)
-    - I need to make an appointment
-    - schedule an appointment for me
-    - I want to book a [support session](service_type)
-    - make a reservation
-    - book me in
-    - I'd like to book
-    - can I schedule a [consultation](service_type) for [tomorrow](date)
-    - book an appointment for [next Monday](date)
-    - I need a [consultation](service_type) on [Friday](date) at [2pm](time)
-    - schedule a [demo](service_type) for [3 people](party_size)
-    - book [consultation](service_type) [next week](date)
-    - I want to reserve a spot
-    - can you book me an appointment
-    - set up an appointment
-    - arrange an appointment
-
-# -----------------------------------------------------------------------------
-# Schedule Meeting
-# -----------------------------------------------------------------------------
-- intent: schedule_meeting
-  examples: |
-    - I want to schedule a meeting
-    - can we set up a meeting
-    - let's schedule a call
-    - I'd like to arrange a meeting
-    - can I book a meeting
-    - schedule a [sales call](service_type)
-    - set up a [technical consultation](service_type)
-    - I need a meeting with your team
-    - can we talk on [Tuesday](date)
-    - schedule a call for [next week](date)
-    - I want to meet with someone
-    - arrange a video call
-    - set up a zoom meeting
-    - book a [30 minute](duration) call
-    - I need to discuss something with your team
-    - can we schedule a [15 minute](duration) call
-
-# -----------------------------------------------------------------------------
-# Cancel Booking
-# -----------------------------------------------------------------------------
-- intent: cancel_booking
-  examples: |
-    - I need to cancel my booking
-    - cancel my appointment
-    - I want to cancel
-    - please cancel my reservation
-    - cancel booking [BK-2024-1234](booking_id)
-    - I can't make it anymore
-    - I need to cancel my appointment on [Monday](date)
-    - cancel the [consultation](service_type)
-    - please cancel
-    - I want to cancel my [demo](service_type)
-    - remove my booking
-    - delete my appointment
-    - I won't be able to come
-    - cancel booking number [BK-2024-5678](booking_id)
-    - I'd like to cancel my reservation
-
-# -----------------------------------------------------------------------------
-# Reschedule Booking
-# -----------------------------------------------------------------------------
-- intent: reschedule_booking
-  examples: |
-    - I need to reschedule
-    - can I change my appointment
-    - reschedule my booking
-    - I want to move my appointment
-    - change the date
-    - change the time
-    - reschedule to [next Friday](date)
-    - move my booking to [3pm](time)
-    - I need to change my appointment time
-    - can I reschedule booking [BK-2024-1234](booking_id)
-    - change my [consultation](service_type) to [Tuesday](date)
-    - I need a different time
-    - can we move the appointment
-    - reschedule my [demo](service_type)
-    - change my reservation
-
-# -----------------------------------------------------------------------------
-# Check Booking Status
-# -----------------------------------------------------------------------------
-- intent: check_booking
-  examples: |
-    - check my booking status
-    - what's the status of my booking
-    - do I have an appointment
-    - check my appointment
-    - find my booking
-    - look up booking [BK-2024-1234](booking_id)
-    - what's my booking reference
-    - when is my appointment
-    - check reservation [BK-2024-5678](booking_id)
-    - I want to see my booking details
-    - show me my appointments
-    - what bookings do I have
-    - confirm my booking
-    - verify my appointment
-
-# =============================================================================
-# SUPPORT & ESCALATION INTENTS
-# =============================================================================
-
-# -----------------------------------------------------------------------------
-# Human Handoff
-# -----------------------------------------------------------------------------
-- intent: handoff_human
-  examples: |
-    - I want to talk to a human
-    - let me speak to a person
-    - can I talk to someone
-    - transfer me to an agent
-    - I need human help
-    - connect me to customer service
-    - I want to speak with a real person
-    - get me a human
-    - this isn't helping, I need a person
-    - can I talk to support
-    - live agent please
-    - human please
-    - I need to talk to someone
-    - can you transfer me
-    - connect me to a representative
-
-# -----------------------------------------------------------------------------
-# Report Problem
-# -----------------------------------------------------------------------------
-- intent: report_problem
-  examples: |
-    - I have a problem
-    - something is wrong
-    - I'm having an issue
-    - there's a problem
-    - I found a bug
-    - this isn't working
-    - I'm experiencing issues
-    - something broke
-    - I need help with an issue
-    - I have a complaint
-    - this is broken
-    - I'm having trouble
-    - I can't do something
-
-# -----------------------------------------------------------------------------
-# Provide Feedback
-# -----------------------------------------------------------------------------
-- intent: provide_feedback
-  examples: |
-    - I want to give feedback
-    - I have some feedback
-    - let me share my experience
-    - I want to leave a review
-    - here's my feedback
-    - I have a suggestion
-    - I want to make a suggestion
-    - feedback for you
-    - I'd like to provide feedback
-
-# =============================================================================
-# FALLBACK & OUT OF SCOPE
-# =============================================================================
-
-# -----------------------------------------------------------------------------
-# Out of Scope
-# -----------------------------------------------------------------------------
 - intent: out_of_scope
   examples: |
-    - what's the weather like
+    - what's the weather?
     - tell me a joke
-    - who is the president
-    - what's 2+2
-    - can you order me pizza
-    - what's the news today
-    - play some music
-    - translate this to Spanish
-    - what's the stock price
-    - how old are you
-    - where do you live
-    - do you have feelings
-    - what's your favorite color
-    - tell me about yourself
-    - can you help me with my homework
-    - what's the meaning of life
+    - who is the president?
+    - what's 2+2?
+    - random question
+    - something completely different
 
-# =============================================================================
-# ENTITY SYNONYMS
-# =============================================================================
-
-- synonym: consultation
+- intent: nlu_fallback
   examples: |
-    - consult
-    - consulting
-    - consultancy
-    - advisory
-    - advice session
-
-- synonym: demo
-  examples: |
-    - demonstration
-    - product demo
-    - walkthrough
-    - tour
-    - preview
-
-- synonym: support
-  examples: |
-    - help
-    - assistance
-    - technical support
-    - tech support
-    - customer support
-
-# =============================================================================
-# REGEX PATTERNS
-# =============================================================================
-
-- regex: booking_id
-  examples: |
-    - BK-\d{4}-\d{4}
-    - BK\d{8}
-
-- regex: email
-  examples: |
-    - [a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+
-
-- regex: phone
-  examples: |
-    - \+?[\d\s\-\(\)]{10,}
-
-# =============================================================================
-# LOOKUP TABLES
-# =============================================================================
-
-- lookup: service_type
-  examples: |
-    - consultation
-    - demo
-    - support
-    - support session
-    - sales call
-    - technical consultation
-    - general inquiry
-    - onboarding
-    - training
-
-- lookup: policy_type
-  examples: |
-    - refund
-    - cancellation
-    - privacy
-    - return
-    - terms
-    - warranty
+    - asdfghjkl
+    - xyzabc123
+    - jkljklj
