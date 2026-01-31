@@ -204,6 +204,75 @@ class ContentSource(BaseModel):
 
 
 # =============================================================================
+# LLM CONFIGURATION
+# =============================================================================
+
+class LLMProvider(str, Enum):
+    """Supported LLM providers."""
+    OPENAI = "openai"
+    AZURE_OPENAI = "azure_openai"
+    ANTHROPIC = "anthropic"
+    OLLAMA = "ollama"
+    GOOGLE = "google"
+    CUSTOM = "custom"
+
+
+class LLMConfig(BaseModel):
+    """LLM configuration for AI-powered chat."""
+    enabled: bool = Field(True, description="Enable LLM-based responses")
+    provider: LLMProvider = Field(LLMProvider.OPENAI, description="LLM provider")
+    model: str = Field("gpt-4o-mini", description="Model identifier")
+    api_key: Optional[str] = Field(None, description="API key (encrypted in DB)")
+    api_base_url: Optional[str] = Field(None, description="Custom API base URL (for Ollama/Azure)")
+    temperature: float = Field(0.7, ge=0, le=2, description="Response creativity (0-2)")
+    max_tokens: int = Field(500, ge=50, le=4000, description="Maximum response tokens")
+    system_prompt: str = Field(
+        "You are a helpful business assistant. Answer questions based on the provided context. "
+        "If you don't know the answer, say so politely. Keep responses concise and professional.",
+        description="System prompt for the LLM"
+    )
+    use_knowledge_base: bool = Field(True, description="Use RAG for context")
+    fallback_to_llm: bool = Field(True, description="Use LLM when RASA confidence is low")
+    confidence_threshold: float = Field(0.6, ge=0, le=1, description="RASA confidence threshold for LLM fallback")
+
+
+class LLMConfigCreate(BaseModel):
+    """Schema for creating/updating LLM configuration."""
+    enabled: Optional[bool] = None
+    provider: Optional[LLMProvider] = None
+    model: Optional[str] = None
+    api_key: Optional[str] = None
+    api_base_url: Optional[str] = None
+    temperature: Optional[float] = None
+    max_tokens: Optional[int] = None
+    system_prompt: Optional[str] = None
+    use_knowledge_base: Optional[bool] = None
+    fallback_to_llm: Optional[bool] = None
+    confidence_threshold: Optional[float] = None
+
+
+class KnowledgeBaseDocument(BaseModel):
+    """Document in the knowledge base."""
+    id: str
+    filename: str
+    file_type: str
+    content_preview: Optional[str] = None
+    chunk_count: int = 0
+    status: str = Field("pending", description="pending, processing, ready, error")
+    error_message: Optional[str] = None
+    created_at: Optional[datetime] = None
+    processed_at: Optional[datetime] = None
+
+
+class KnowledgeBaseStats(BaseModel):
+    """Knowledge base statistics."""
+    total_documents: int = 0
+    total_chunks: int = 0
+    collections: List[str] = []
+    last_updated: Optional[datetime] = None
+
+
+# =============================================================================
 # ADMIN USER
 # =============================================================================
 
@@ -301,4 +370,22 @@ DEFAULT_BOT_CONFIG = BotConfig(
     contact_phone="(555) 123-4567",
     business_name="Example Business",
     timezone="America/New_York"
+).dict()
+
+
+# =============================================================================
+# DEFAULT LLM CONFIGURATION
+# =============================================================================
+
+DEFAULT_LLM_CONFIG = LLMConfig(
+    enabled=False,
+    provider=LLMProvider.OPENAI,
+    model="gpt-4o-mini",
+    api_key=None,
+    temperature=0.7,
+    max_tokens=500,
+    system_prompt="You are a helpful business assistant. Answer questions based on the provided context. If you don't know the answer, say so politely. Keep responses concise and professional.",
+    use_knowledge_base=True,
+    fallback_to_llm=True,
+    confidence_threshold=0.6
 ).dict()

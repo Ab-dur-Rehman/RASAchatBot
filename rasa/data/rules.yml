@@ -80,7 +80,12 @@ rules:
     - intent: out_of_scope
     - action: utter_out_of_scope
 
-- rule: Handle fallback
+- rule: Handle fallback with LLM
   steps:
     - intent: nlu_fallback
-    - action: utter_default
+    - action: action_llm_fallback
+
+- rule: Answer from knowledge base
+  steps:
+    - intent: ask_knowledge_base
+    - action: action_answer_from_knowledge_base

@@ -354,6 +354,8 @@
         <nav>
             <a href="#" class="active" data-section="dashboard">📊 Dashboard</a>
             <a href="#" data-section="config">⚙️ Configuration</a>
+            <a href="#" data-section="llm">🧠 AI/LLM Settings</a>
+            <a href="#" data-section="knowledge">📚 Knowledge Base</a>
             <a href="#" data-section="training">🎓 Training</a>
             <a href="#" data-section="intents">🏷️ Intents</a>
             <a href="#" data-section="responses">💬 Responses</a>
@@ -461,6 +463,218 @@
                         <button type="submit" class="btn">💾 Save Configuration</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <!-- LLM Settings Section -->
+        <div id="section-llm" class="section">
+            <div class="header">
+                <h2>AI/LLM Settings</h2>
+                <button class="btn" onclick="testLLMConnection()">🔗 Test Connection</button>
+            </div>
+            
+            <div class="panel">
+                <h3>🧠 LLM Configuration</h3>
+                <p style="color: #666; margin-bottom: 16px;">Configure AI-powered responses using your preferred language model provider.</p>
+                
+                <form id="llm-form">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="llm-enabled" style="width: auto;">
+                            <span>Enable LLM-powered responses</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Provider</label>
+                            <select id="llm-provider" onchange="updateModelOptions()">
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                                <option value="google">Google (Gemini)</option>
+                                <option value="azure_openai">Azure OpenAI</option>
+                                <option value="ollama">Ollama (Local)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select id="llm-model">
+                                <option value="gpt-4o-mini">GPT-4o Mini (Recommended)</option>
+                                <option value="gpt-4o">GPT-4o (Best)</option>
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group" id="api-key-group">
+                        <label>API Key</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="password" id="llm-api-key" placeholder="Enter your API key">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleApiKeyVisibility()">👁️</button>
+                        </div>
+                        <small id="api-key-status" style="color: #666; margin-top: 4px; display: block;"></small>
+                    </div>
+                    
+                    <div class="form-group" id="api-url-group" style="display: none;">
+                        <label>API Base URL (for Ollama/Azure)</label>
+                        <input type="text" id="llm-api-url" placeholder="http://localhost:11434">
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Temperature (0-2)</label>
+                            <input type="range" id="llm-temperature" min="0" max="2" step="0.1" value="0.7" style="width: 100%;">
+                            <small id="temp-value">0.7 - Balanced</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Max Tokens</label>
+                            <input type="number" id="llm-max-tokens" value="500" min="50" max="4000">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>System Prompt</label>
+                        <textarea id="llm-system-prompt" rows="4">You are a helpful business assistant. Answer questions based on the provided context. If you don't know the answer, say so politely. Keep responses concise and professional.</textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="llm-use-kb" checked style="width: auto;">
+                            <span>Use Knowledge Base for context (RAG)</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center; gap: 10px;">
+                            <input type="checkbox" id="llm-fallback" checked style="width: auto;">
+                            <span>Use LLM as fallback when bot doesn't understand</span>
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Confidence Threshold for Fallback</label>
+                        <input type="range" id="llm-threshold" min="0" max="1" step="0.05" value="0.6" style="width: 100%;">
+                        <small id="threshold-value">0.6 - Use LLM when confidence is below 60%</small>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button type="submit" class="btn">💾 Save LLM Settings</button>
+                        <button type="button" class="btn btn-danger" onclick="removeApiKey()">🗑️ Remove API Key</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="panel">
+                <h3>🧪 Test LLM</h3>
+                <div class="form-group">
+                    <label>Test Message</label>
+                    <input type="text" id="llm-test-message" placeholder="Ask a question to test the LLM...">
+                </div>
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" id="llm-test-use-kb" checked style="width: auto;">
+                        <span>Include Knowledge Base context</span>
+                    </label>
+                </div>
+                <button class="btn" onclick="testLLMChat()">💬 Send Test</button>
+                <div id="llm-test-result" style="margin-top: 16px; padding: 16px; background: #f9fafb; border-radius: 8px; display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Knowledge Base Section -->
+        <div id="section-knowledge" class="section">
+            <div class="header">
+                <h2>Knowledge Base</h2>
+                <span class="status-badge info" id="kb-status">Loading...</span>
+            </div>
+            
+            <div class="cards">
+                <div class="card">
+                    <h3>Documents</h3>
+                    <div class="value" id="kb-doc-count">--</div>
+                    <div class="change">Uploaded files</div>
+                </div>
+                <div class="card">
+                    <h3>Chunks</h3>
+                    <div class="value" id="kb-chunk-count">--</div>
+                    <div class="change">Indexed for search</div>
+                </div>
+                <div class="card">
+                    <h3>Collections</h3>
+                    <div class="value" id="kb-collection-count">--</div>
+                    <div class="change">Vector databases</div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>📤 Upload Document</h3>
+                <p style="color: #666; margin-bottom: 16px;">Upload files to add to the knowledge base. Supported formats: TXT, MD, PDF, HTML, JSON, CSV</p>
+                
+                <form id="upload-form" enctype="multipart/form-data">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <label>Select File</label>
+                            <input type="file" id="kb-file" accept=".txt,.md,.pdf,.html,.json,.csv">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Collection</label>
+                            <select id="kb-collection">
+                                <option value="website_content">website_content (default)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">📤 Upload & Process</button>
+                </form>
+                
+                <div id="upload-progress" style="display: none; margin-top: 16px;">
+                    <div class="training-progress">
+                        <div class="spinner"></div>
+                        <p>Processing document...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>🔗 Import from URL</h3>
+                <form id="url-import-form">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <label>URL</label>
+                            <input type="url" id="kb-url" placeholder="https://example.com/page">
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label>Collection</label>
+                            <select id="kb-url-collection">
+                                <option value="website_content">website_content</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn">🔗 Import URL</button>
+                </form>
+            </div>
+            
+            <div class="panel">
+                <h3>🔍 Search Knowledge Base</h3>
+                <div class="form-row">
+                    <div class="form-group" style="flex: 3;">
+                        <input type="text" id="kb-search-query" placeholder="Search your knowledge base...">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <button class="btn" onclick="searchKnowledgeBase()" style="width: 100%;">🔍 Search</button>
+                    </div>
+                </div>
+                <div id="kb-search-results" style="margin-top: 16px;"></div>
+            </div>
+            
+            <div class="panel">
+                <h3>📚 Documents</h3>
+                <div id="kb-documents-list">
+                    <div class="empty-state">
+                        <div class="icon">📚</div>
+                        <p>Loading documents...</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -740,6 +954,14 @@
                     loadModelInfo();
                     loadIntentsForDropdown();
                     break;
+                case 'llm':
+                    loadLLMConfig();
+                    break;
+                case 'knowledge':
+                    loadKnowledgeBaseStats();
+                    loadKnowledgeBaseDocuments();
+                    loadCollections();
+                    break;
             }
         }
 
@@ -818,8 +1040,25 @@
         // =============================================================================
         // TRAINING MANAGEMENT
         // =============================================================================
-        function loadIntentsForDropdown() {
+        async function loadIntentsForDropdown() {
             const select = document.getElementById('train-intent');
+            select.innerHTML = '<option value="">-- Loading intents... --</option>';
+            
+            // If currentIntents is empty, fetch from API
+            if (currentIntents.length === 0) {
+                try {
+                    const response = await fetch(`${ADMIN_API}/domain`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.intents && Array.isArray(data.intents)) {
+                            currentIntents = data.intents;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error fetching intents:', error);
+                }
+            }
+            
             select.innerHTML = '<option value="">-- Select an intent --</option>';
             
             currentIntents.forEach(intent => {
@@ -1332,6 +1571,511 @@
                 showToast('Error saving configuration', 'error');
             }
         });
+
+        // =============================================================================
+        // LLM SETTINGS
+        // =============================================================================
+        
+        const LLM_MODELS = {
+            openai: [
+                { id: 'gpt-4o-mini', name: 'GPT-4o Mini (Recommended)' },
+                { id: 'gpt-4o', name: 'GPT-4o (Best)' },
+                { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
+                { id: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo' }
+            ],
+            anthropic: [
+                { id: 'claude-sonnet-4-20250514', name: 'Claude Sonnet 4' },
+                { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet' },
+                { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' }
+            ],
+            google: [
+                { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+                { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' }
+            ],
+            ollama: [
+                { id: 'llama3.2', name: 'Llama 3.2' },
+                { id: 'mistral', name: 'Mistral 7B' },
+                { id: 'codellama', name: 'Code Llama' },
+                { id: 'phi3', name: 'Phi-3' }
+            ],
+            azure_openai: [
+                { id: 'gpt-4o', name: 'GPT-4o (Deployment)' },
+                { id: 'gpt-35-turbo', name: 'GPT-3.5 Turbo (Deployment)' }
+            ]
+        };
+        
+        function updateModelOptions() {
+            const provider = document.getElementById('llm-provider').value;
+            const modelSelect = document.getElementById('llm-model');
+            const apiKeyGroup = document.getElementById('api-key-group');
+            const apiUrlGroup = document.getElementById('api-url-group');
+            
+            // Update model options
+            modelSelect.innerHTML = LLM_MODELS[provider].map(m => 
+                `<option value="${m.id}">${m.name}</option>`
+            ).join('');
+            
+            // Show/hide API key based on provider
+            if (provider === 'ollama') {
+                apiKeyGroup.style.display = 'none';
+                apiUrlGroup.style.display = 'block';
+                document.getElementById('llm-api-url').placeholder = 'http://ollama:11434';
+            } else if (provider === 'azure_openai') {
+                apiKeyGroup.style.display = 'block';
+                apiUrlGroup.style.display = 'block';
+                document.getElementById('llm-api-url').placeholder = 'https://your-resource.openai.azure.com';
+            } else {
+                apiKeyGroup.style.display = 'block';
+                apiUrlGroup.style.display = 'none';
+            }
+        }
+        
+        // Temperature slider
+        document.getElementById('llm-temperature').addEventListener('input', (e) => {
+            const temp = parseFloat(e.target.value);
+            let label = 'Balanced';
+            if (temp < 0.3) label = 'Focused & Deterministic';
+            else if (temp < 0.7) label = 'Balanced';
+            else if (temp < 1.2) label = 'Creative';
+            else label = 'Very Creative';
+            document.getElementById('temp-value').textContent = `${temp} - ${label}`;
+        });
+        
+        // Threshold slider
+        document.getElementById('llm-threshold').addEventListener('input', (e) => {
+            const threshold = parseFloat(e.target.value);
+            document.getElementById('threshold-value').textContent = 
+                `${threshold} - Use LLM when confidence is below ${Math.round(threshold * 100)}%`;
+        });
+        
+        function toggleApiKeyVisibility() {
+            const input = document.getElementById('llm-api-key');
+            input.type = input.type === 'password' ? 'text' : 'password';
+        }
+        
+        async function loadLLMConfig() {
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/llm/config`, {
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const config = data.config;
+                    
+                    document.getElementById('llm-enabled').checked = config.enabled || false;
+                    document.getElementById('llm-provider').value = config.provider || 'openai';
+                    updateModelOptions();
+                    document.getElementById('llm-model').value = config.model || 'gpt-4o-mini';
+                    document.getElementById('llm-temperature').value = config.temperature || 0.7;
+                    document.getElementById('llm-max-tokens').value = config.max_tokens || 500;
+                    document.getElementById('llm-system-prompt').value = config.system_prompt || '';
+                    document.getElementById('llm-use-kb').checked = config.use_knowledge_base !== false;
+                    document.getElementById('llm-fallback').checked = config.fallback_to_llm !== false;
+                    document.getElementById('llm-threshold').value = config.confidence_threshold || 0.6;
+                    document.getElementById('llm-api-url').value = config.api_base_url || '';
+                    
+                    // Update slider labels
+                    document.getElementById('temp-value').textContent = `${config.temperature || 0.7} - Balanced`;
+                    document.getElementById('threshold-value').textContent = 
+                        `${config.confidence_threshold || 0.6} - Use LLM when confidence is below ${Math.round((config.confidence_threshold || 0.6) * 100)}%`;
+                    
+                    // API key status
+                    const status = document.getElementById('api-key-status');
+                    if (config.api_key_set) {
+                        status.innerHTML = `✅ API key configured (${config.api_key_masked})`;
+                        status.style.color = '#22c55e';
+                    } else {
+                        status.innerHTML = '⚠️ No API key configured';
+                        status.style.color = '#d97706';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading LLM config:', error);
+            }
+        }
+        
+        document.getElementById('llm-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const config = {
+                enabled: document.getElementById('llm-enabled').checked,
+                provider: document.getElementById('llm-provider').value,
+                model: document.getElementById('llm-model').value,
+                temperature: parseFloat(document.getElementById('llm-temperature').value),
+                max_tokens: parseInt(document.getElementById('llm-max-tokens').value),
+                system_prompt: document.getElementById('llm-system-prompt').value,
+                use_knowledge_base: document.getElementById('llm-use-kb').checked,
+                fallback_to_llm: document.getElementById('llm-fallback').checked,
+                confidence_threshold: parseFloat(document.getElementById('llm-threshold').value)
+            };
+            
+            const apiKey = document.getElementById('llm-api-key').value.trim();
+            if (apiKey) {
+                config.api_key = apiKey;
+            }
+            
+            const apiUrl = document.getElementById('llm-api-url').value.trim();
+            if (apiUrl) {
+                config.api_base_url = apiUrl;
+            }
+            
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/llm/config`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer admin'
+                    },
+                    body: JSON.stringify(config)
+                });
+                
+                if (response.ok) {
+                    showToast('LLM settings saved!', 'success');
+                    document.getElementById('llm-api-key').value = '';
+                    loadLLMConfig();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (error) {
+                showToast('Error saving LLM settings', 'error');
+            }
+        });
+        
+        async function testLLMConnection() {
+            showToast('Testing LLM connection...', 'info');
+            
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/llm/test-connection`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showToast(`✅ Connection successful! Model: ${data.model}`, 'success');
+                } else {
+                    showToast(`❌ Connection failed: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showToast('Error testing connection', 'error');
+            }
+        }
+        
+        async function testLLMChat() {
+            const message = document.getElementById('llm-test-message').value.trim();
+            if (!message) {
+                showToast('Please enter a test message', 'error');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('llm-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '<div class="spinner" style="margin: 0 auto;"></div><p style="text-align: center;">Generating response...</p>';
+            
+            const useKB = document.getElementById('llm-test-use-kb').checked;
+            
+            try {
+                const formData = new FormData();
+                formData.append('message', message);
+                formData.append('use_knowledge_base', useKB);
+                
+                const response = await fetch(`${ADMIN_URL}/api/llm/chat`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer admin' },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <p><strong>Response:</strong></p>
+                        <p style="white-space: pre-wrap;">${data.response}</p>
+                        <p style="color: #666; margin-top: 12px; font-size: 12px;">
+                            Model: ${data.model} | Provider: ${data.provider} | 
+                            Context used: ${data.context_used ? 'Yes' : 'No'}
+                        </p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<p style="color: #ef4444;">Error: ${data.detail || 'Unknown error'}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p style="color: #ef4444;">Error: ${error.message}</p>`;
+            }
+        }
+        
+        async function removeApiKey() {
+            if (!confirm('Are you sure you want to remove the API key?')) return;
+            
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/llm/api-key`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                
+                if (response.ok) {
+                    showToast('API key removed', 'success');
+                    loadLLMConfig();
+                }
+            } catch (error) {
+                showToast('Error removing API key', 'error');
+            }
+        }
+        
+        // =============================================================================
+        // KNOWLEDGE BASE
+        // =============================================================================
+        
+        async function loadKnowledgeBaseStats() {
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/knowledge-base/stats`, {
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('kb-collection-count').textContent = data.total_collections || 0;
+                    document.getElementById('kb-chunk-count').textContent = data.total_chunks || 0;
+                    
+                    const statusBadge = document.getElementById('kb-status');
+                    if (data.chromadb_status === 'connected') {
+                        statusBadge.textContent = 'ChromaDB Connected';
+                        statusBadge.className = 'status-badge success';
+                    } else {
+                        statusBadge.textContent = 'ChromaDB Error';
+                        statusBadge.className = 'status-badge error';
+                    }
+                }
+            } catch (error) {
+                document.getElementById('kb-status').textContent = 'Error';
+                document.getElementById('kb-status').className = 'status-badge error';
+            }
+        }
+        
+        async function loadKnowledgeBaseDocuments() {
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/knowledge-base/documents`, {
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('kb-doc-count').textContent = data.total || 0;
+                    displayDocuments(data.documents || []);
+                }
+            } catch (error) {
+                console.error('Error loading documents:', error);
+            }
+        }
+        
+        function displayDocuments(documents) {
+            const container = document.getElementById('kb-documents-list');
+            
+            if (documents.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📚</div>
+                        <p>No documents uploaded yet. Upload a file or import from URL to get started.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = `
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Collection</th>
+                            <th>Chunks</th>
+                            <th>Ingested</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${documents.map(doc => `
+                            <tr>
+                                <td>${doc.name}</td>
+                                <td><span class="intent-tag">${doc.source_type}</span></td>
+                                <td>${doc.collection_name}</td>
+                                <td>${doc.chunk_count}</td>
+                                <td>${doc.last_ingested ? new Date(doc.last_ingested).toLocaleDateString() : 'N/A'}</td>
+                                <td>
+                                    <button class="icon-btn" onclick="deleteDocument('${doc.id}')" title="Delete">🗑️</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        async function loadCollections() {
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/knowledge-base/collections`, {
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const options = (data.collections || []).map(c => 
+                        `<option value="${c.name}">${c.name} (${c.count} chunks)</option>`
+                    ).join('');
+                    
+                    const defaultOption = '<option value="website_content">website_content (default)</option>';
+                    document.getElementById('kb-collection').innerHTML = defaultOption + options;
+                    document.getElementById('kb-url-collection').innerHTML = defaultOption + options;
+                }
+            } catch (error) {
+                console.error('Error loading collections:', error);
+            }
+        }
+        
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('kb-file');
+            const collection = document.getElementById('kb-collection').value;
+            
+            if (!fileInput.files.length) {
+                showToast('Please select a file', 'error');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('collection', collection);
+            
+            document.getElementById('upload-progress').style.display = 'block';
+            
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/knowledge-base/upload`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer admin' },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast(`Document uploaded! ${data.chunks_created} chunks created.`, 'success');
+                    fileInput.value = '';
+                    loadKnowledgeBaseStats();
+                    loadKnowledgeBaseDocuments();
+                } else {
+                    showToast(`Error: ${data.detail}`, 'error');
+                }
+            } catch (error) {
+                showToast('Upload failed', 'error');
+            } finally {
+                document.getElementById('upload-progress').style.display = 'none';
+            }
+        });
+        
+        document.getElementById('url-import-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const url = document.getElementById('kb-url').value.trim();
+            const collection = document.getElementById('kb-url-collection').value;
+            
+            if (!url) {
+                showToast('Please enter a URL', 'error');
+                return;
+            }
+            
+            showToast('Importing URL...', 'info');
+            
+            const formData = new FormData();
+            formData.append('url', url);
+            formData.append('collection', collection);
+            
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/knowledge-base/import-url`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer admin' },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showToast(`URL imported! ${data.chunks_created} chunks created.`, 'success');
+                    document.getElementById('kb-url').value = '';
+                    loadKnowledgeBaseStats();
+                    loadKnowledgeBaseDocuments();
+                } else {
+                    showToast(`Error: ${data.detail}`, 'error');
+                }
+            } catch (error) {
+                showToast('Import failed', 'error');
+            }
+        });
+        
+        async function searchKnowledgeBase() {
+            const query = document.getElementById('kb-search-query').value.trim();
+            if (!query) {
+                showToast('Please enter a search query', 'error');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('kb-search-results');
+            resultsDiv.innerHTML = '<p style="color: #666;">Searching...</p>';
+            
+            const formData = new FormData();
+            formData.append('query', query);
+            
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/knowledge-base/search`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer admin' },
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    resultsDiv.innerHTML = data.results.map((r, i) => `
+                        <div class="example-item" style="margin-bottom: 12px;">
+                            <div class="text" style="flex: 1;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span class="intent-tag">${r.source}</span>
+                                    <span style="color: #666; font-size: 12px;">Score: ${(r.score * 100).toFixed(1)}%</span>
+                                </div>
+                                <p style="white-space: pre-wrap; font-size: 13px;">${r.content.substring(0, 300)}${r.content.length > 300 ? '...' : ''}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultsDiv.innerHTML = '<p style="color: #666;">No results found</p>';
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = '<p style="color: #ef4444;">Search failed</p>';
+            }
+        }
+        
+        async function deleteDocument(docId) {
+            if (!confirm('Are you sure you want to delete this document?')) return;
+            
+            try {
+                const response = await fetch(`${ADMIN_URL}/api/knowledge-base/documents/${docId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': 'Bearer admin' }
+                });
+                
+                if (response.ok) {
+                    showToast('Document deleted', 'success');
+                    loadKnowledgeBaseStats();
+                    loadKnowledgeBaseDocuments();
+                } else {
+                    showToast('Failed to delete document', 'error');
+                }
+            } catch (error) {
+                showToast('Error deleting document', 'error');
+            }
+        }
 
         // =============================================================================
         // INITIALIZATION

@@ -212,6 +212,54 @@ CREATE TABLE IF NOT EXISTS conversation_analytics (
 CREATE INDEX IF NOT EXISTS idx_analytics_date ON conversation_analytics(date DESC);
 
 -- =============================================================================
+-- LLM CONFIGURATION TABLE
+-- =============================================================================
+-- LLM settings for AI-powered chat
+
+CREATE TABLE IF NOT EXISTS llm_config (
+    id SERIAL PRIMARY KEY,
+    config JSONB NOT NULL DEFAULT '{
+        "enabled": false,
+        "provider": "openai",
+        "model": "gpt-4o-mini",
+        "api_key": null,
+        "api_base_url": null,
+        "temperature": 0.7,
+        "max_tokens": 500,
+        "system_prompt": "You are a helpful business assistant. Answer questions based on the provided context. If you don''t know the answer, say so politely. Keep responses concise and professional.",
+        "use_knowledge_base": true,
+        "fallback_to_llm": true,
+        "confidence_threshold": 0.6
+    }'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_by VARCHAR(255),
+    CONSTRAINT single_llm_config CHECK (id = 1)
+);
+
+-- Create single LLM config row if not exists
+INSERT INTO llm_config (id, config)
+VALUES (1, '{
+    "enabled": false,
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "api_key": null,
+    "temperature": 0.7,
+    "max_tokens": 500,
+    "system_prompt": "You are a helpful business assistant.",
+    "use_knowledge_base": true,
+    "fallback_to_llm": true,
+    "confidence_threshold": 0.6
+}'::jsonb)
+ON CONFLICT (id) DO NOTHING;
+
+-- Add trigger for llm_config
+CREATE TRIGGER update_llm_config_updated_at
+    BEFORE UPDATE ON llm_config
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================================================
 -- FUNCTIONS AND TRIGGERS
 -- =============================================================================
 

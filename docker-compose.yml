@@ -64,6 +64,7 @@ services:
       - ./knowledge_base:/app/knowledge_base
     environment:
       - API_BASE_URL=${API_BASE_URL:-http://api-server:8000}
+      - ADMIN_API_URL=http://admin-api:8080
       - REDIS_URL=redis://redis:6379/0
       - DB_HOST=postgres
       - DB_PORT=5432
@@ -72,6 +73,8 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
       - CHROMADB_HOST=chromadb
       - CHROMADB_PORT=8000
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       - postgres
@@ -106,13 +109,21 @@ services:
       - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
       - CORS_ORIGINS=*
       - RASA_DIR=/app/rasa
+      - CHROMADB_HOST=chromadb
+      - CHROMADB_PORT=8000
+      - UPLOAD_DIR=/app/knowledge_base/data
+      - KB_COLLECTION=website_content
+      - EMBEDDING_MODEL=all-MiniLM-L6-v2
     volumes:
       - ./rasa:/app/rasa:rw
+      - ./knowledge_base:/app/knowledge_base:rw
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      chromadb:
+        condition: service_started
     networks:
       - chatbot-network
     healthcheck:
@@ -143,7 +154,7 @@ services:
   # CHROMADB - Vector Store for Knowledge Base
   # ===========================================================================
   chromadb:
-    image: chromadb/chroma:0.4.22
+    image: chromadb/chroma:0.5.23
     container_name: chromadb
     ports:
       - "8001:8000"
@@ -228,6 +239,49 @@ services:
       - production
     restart: unless-stopped
 
+  # ===========================================================================
+  # OLLAMA - Local LLM Server (Optional)
+  # ===========================================================================
+  # To use with GPU: docker-compose --profile local-llm-gpu up -d ollama-gpu
+  # To use CPU only: docker-compose --profile local-llm up -d ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - chatbot-network
+    profiles:
+      - local-llm
+    restart: unless-stopped
+
+  # Ollama with GPU support (requires NVIDIA GPU + drivers)
+  ollama-gpu:
+    image: ollama/ollama:latest
+    container_name: ollama-gpu
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - chatbot-network
+    profiles:
+      - local-llm-gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
 # =============================================================================
 # NETWORKS
 # =============================================================================
@@ -246,3 +300,5 @@ volumes:
     name: chatbot-redis-data
   chromadb-data:
     name: chatbot-chromadb-data
+  ollama-data:
+    name: chatbot-ollama-data

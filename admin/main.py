@@ -14,6 +14,8 @@ import os
 
 from .config.api import router as config_router
 from .config.training import router as training_router
+from .config.knowledge_base import router as knowledge_base_router
+from .config.llm import router as llm_router
 
 
 # Database pool
@@ -36,9 +38,11 @@ async def lifespan(app: FastAPI):
         max_size=20
     )
     
-    # Import and set pool in config module
-    from .config import api
+    # Import and set pool in config modules
+    from .config import api, knowledge_base, llm
     api.db_pool = db_pool
+    knowledge_base.db_pool = db_pool
+    llm.db_pool = db_pool
     
     yield
     
@@ -68,6 +72,8 @@ app.add_middleware(
 # Include routers
 app.include_router(config_router)
 app.include_router(training_router)
+app.include_router(knowledge_base_router)
+app.include_router(llm_router)
 
 
 @app.get("/health")

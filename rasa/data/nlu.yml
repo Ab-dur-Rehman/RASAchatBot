@@ -1,202 +1,311 @@
-version: "3.1"
-
+version: '3.1'
 nlu:
-# =============================================================================
-# GREETINGS & CHITCHAT
-# =============================================================================
-
 - intent: greet
-  examples: |
-    - hey
-    - hello
-    - hi
-    - good morning
-    - good evening
-    - good afternoon
-    - hey there
-    - hi there
-    - hello there
-    - heya
-
+  examples: "|\n    - good afternoon\n    - howdy partner!\n    - hey there\n    -\
+    \ hi\n    - good morning\n    - hello there\n    - good evening\n    - hi there\n\
+    \    - heya\n    - hey\n    - hello\n    - good day to you\n"
 - intent: goodbye
-  examples: |
-    - bye
-    - goodbye
-    - see ya
-    - see you later
-    - have a nice day
-    - bye bye
-    - take care
-    - catch you later
-    - see you
-    - I'm leaving
+  examples: '- bye
 
+    - goodbye
+
+    - see ya
+
+    - see you later
+
+    - have a nice day
+
+    - bye bye
+
+    - take care
+
+    - catch you later
+
+    - see you
+
+    - I''m leaving
+
+    '
 - intent: thank_you
-  examples: |
-    - thanks
+  examples: '- thanks
+
     - thank you
+
     - thank you so much
+
     - thanks a lot
+
     - thanks a bunch
+
     - appreciate it
-    - that's helpful
+
+    - that''s helpful
+
     - many thanks
+
     - thanks for your help
 
+    '
 - intent: affirm
-  examples: |
-    - yes
+  examples: '- yes
+
     - yes please
+
     - yeah
+
     - yep
+
     - sure
+
     - ok
+
     - okay
+
     - sounds good
+
     - that works
+
     - correct
+
     - right
+
     - exactly
 
+    '
 - intent: deny
-  examples: |
-    - no
+  examples: '- no
+
     - no thanks
+
     - nope
+
     - not really
-    - I don't think so
+
+    - I don''t think so
+
     - no way
+
     - never
+
     - not interested
 
+    '
 - intent: bot_challenge
-  examples: |
-    - are you a bot?
+  examples: '- are you a bot?
+
     - are you human?
+
     - am I talking to a bot?
+
     - am I talking to a human?
+
     - are you real?
+
     - are you a robot?
 
+    '
 - intent: mood_great
-  examples: |
-    - I'm doing great
-    - I'm good
+  examples: '- I''m doing great
+
+    - I''m good
+
     - doing well
+
     - feeling great
+
     - I feel good
+
     - wonderful
+
     - amazing
+
     - excellent
+
     - fantastic
+
     - perfect
 
+    '
 - intent: mood_unhappy
-  examples: |
-    - I'm sad
-    - I'm not happy
+  examples: '- I''m sad
+
+    - I''m not happy
+
     - not so good
+
     - not great
+
     - feeling down
-    - I'm frustrated
+
+    - I''m frustrated
+
     - terrible
+
     - awful
 
-# =============================================================================
-# BUSINESS Q&A
-# =============================================================================
-
+    '
 - intent: ask_hours
-  examples: |
-    - what are your hours?
+  examples: '- what are your hours?
+
     - when are you open?
+
     - what time do you open?
+
     - what time do you close?
+
     - business hours
+
     - opening hours
+
     - are you open today?
+
     - are you open on weekends?
+
     - what days are you open?
 
+    '
 - intent: ask_pricing
-  examples: |
-    - how much do you charge?
+  examples: '- how much do you charge?
+
     - what are your prices?
+
     - pricing information
+
     - how much does it cost?
-    - what's the cost?
+
+    - what''s the cost?
+
     - do you have a price list?
+
     - what are the rates?
+
     - how much for a consultation?
 
+    '
 - intent: ask_location
-  examples: |
-    - where are you located?
-    - what's your address?
+  examples: '- where are you located?
+
+    - what''s your address?
+
     - where is your office?
+
     - how do I get there?
+
     - where can I find you?
+
     - your location please
+
     - give me directions
 
+    '
 - intent: ask_services
-  examples: |
-    - what services do you offer?
+  examples: '- what services do you offer?
+
     - what do you do?
+
     - what can you help me with?
+
     - tell me about your services
+
     - what services are available?
+
     - what kind of services?
+
     - list your services
 
+    '
 - intent: ask_policy
-  examples: |
-    - what's your refund policy?
+  examples: '- what''s your refund policy?
+
     - cancellation policy
-    - what's your privacy policy?
+
+    - what''s your privacy policy?
+
     - do you have a return policy?
+
     - what are your policies?
+
     - terms and conditions
 
+    '
 - intent: ask_contact
-  examples: |
-    - how can I contact you?
-    - what's your email?
+  examples: '- how can I contact you?
+
+    - what''s your email?
+
     - phone number please
+
     - contact information
+
     - how do I reach you?
+
     - give me your contact details
+
     - can I call you?
 
+    '
 - intent: ask_business_info
-  examples: |
-    - tell me about your company
+  examples: '- tell me about your company
+
     - who are you?
+
     - what does your company do?
+
     - about your business
+
     - company information
+
     - what is this company?
 
+    '
 - intent: ask_faq
-  examples: |
-    - frequently asked questions
+  examples: '- frequently asked questions
+
     - FAQ
+
     - common questions
+
     - what do people usually ask?
+
     - help
+
     - I need help
 
-- intent: out_of_scope
+    '
+- intent: ask_knowledge_base
   examples: |
-    - what's the weather?
+    - search for information about [products](info_type)
+    - what does your documentation say about [shipping](info_type)?
+    - can you look up [warranty](info_type) information?
+    - find information about [returns](info_type)
+    - search your knowledge base for [pricing](info_type)
+    - I have a question about something specific
+    - look up information for me
+    - can you find details about this?
+    - what information do you have on [support](info_type)?
+    - search for [terms of service](info_type)
+    - tell me more about [your company](info_type)
+    - I need detailed information
+    - do you have any documentation on [this topic](info_type)?
+- intent: out_of_scope
+  examples: '- what''s the weather?
+
     - tell me a joke
+
     - who is the president?
-    - what's 2+2?
+
+    - what''s 2+2?
+
     - random question
+
     - something completely different
 
+    '
 - intent: nlu_fallback
-  examples: |
-    - asdfghjkl
+  examples: '- asdfghjkl
+
     - xyzabc123
+
     - jkljklj
+
+    '

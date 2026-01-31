@@ -1,107 +1,152 @@
-version: "3.1"
-
-# =============================================================================
-# SIMPLE DOMAIN - Basic Chatbot for Testing
-# =============================================================================
-
+version: '3.1'
 intents:
-  - greet
-  - goodbye
-  - thank_you
-  - affirm
-  - deny
-  - bot_challenge
-  - mood_great
-  - mood_unhappy
-  - ask_business_info
-  - ask_pricing
-  - ask_hours
-  - ask_location
-  - ask_policy
-  - ask_services
-  - ask_faq
-  - ask_contact
-  - out_of_scope
-  - nlu_fallback
-
+- greet
+- goodbye
+- thank_you
+- affirm
+- deny
+- bot_challenge
+- mood_great
+- mood_unhappy
+- ask_business_info
+- ask_pricing
+- ask_hours
+- ask_location
+- ask_policy
+- ask_services
+- ask_faq
+- ask_contact
+- ask_knowledge_base
+- out_of_scope
+- nlu_fallback
 entities:
-  - info_type
-
+- info_type
 slots:
   info_type:
     type: text
     influence_conversation: false
     mappings:
-      - type: from_entity
-        entity: info_type
-
+    - type: from_entity
+      entity: info_type
+  llm_response:
+    type: text
+    influence_conversation: false
+    mappings:
+    - type: custom
 responses:
   utter_greet:
-    - text: "Hello! 👋 Welcome! I'm here to help you with information about our services. What can I do for you today?"
-    - text: "Hi there! 👋 I'm your virtual assistant. How can I help you?"
-
+  - text: Hello! 👋 Welcome! I'm here to help you with information about our services.
+      What can I do for you today?
+  - text: Hi there! 👋 I'm your virtual assistant. How can I help you?
   utter_goodbye:
-    - text: "Goodbye! Have a great day! 👋"
-    - text: "Bye! Feel free to come back if you have more questions."
-
+  - text: Goodbye! Have a great day! 👋
+  - text: Bye! Feel free to come back if you have more questions.
   utter_thank_you_response:
-    - text: "You're welcome! Is there anything else I can help you with?"
-    - text: "Happy to help! Let me know if you need anything else."
-
+  - text: You're welcome! Is there anything else I can help you with?
+  - text: Happy to help! Let me know if you need anything else.
   utter_iamabot:
-    - text: "I'm a virtual assistant chatbot, here to help you with questions about our business."
-
+  - text: I'm a virtual assistant chatbot, here to help you with questions about our
+      business.
   utter_happy:
-    - text: "Great to hear! 😊 How can I assist you today?"
-
+  - text: Great to hear! 😊 How can I assist you today?
   utter_cheer_up:
-    - text: "I'm sorry to hear that. 😔 Let me know how I can help make things better."
-
+  - text: I'm sorry to hear that. 😔 Let me know how I can help make things better.
   utter_default:
-    - text: "I'm not sure I understand. Could you rephrase that?"
-    - text: "I didn't quite get that. Can you try asking in a different way?"
-
+  - text: I'm not sure I understand. Could you rephrase that?
+  - text: I didn't quite get that. Can you try asking in a different way?
   utter_out_of_scope:
-    - text: "I can only help with questions about our business, services, and appointments. Is there something else I can help you with?"
-
+  - text: I can only help with questions about our business, services, and appointments.
+      Is there something else I can help you with?
   utter_provide_contact:
-    - text: "You can reach us at:\n📧 Email: support@example.com\n📞 Phone: (555) 123-4567\n🌐 Website: www.example.com"
+  - text: 'You can reach us at:
 
+      📧 Email: support@example.com
+
+      📞 Phone: (555) 123-4567
+
+      🌐 Website: www.example.com'
   utter_provide_hours:
-    - text: "We're open Monday to Friday, 9 AM to 6 PM. We're closed on weekends and holidays."
-
+  - text: We're open Monday to Friday, 9 AM to 6 PM. We're closed on weekends and
+      holidays.
   utter_provide_services:
-    - text: "We offer the following services:\n• Consultation - Expert advice sessions\n• Demo - Product demonstrations\n• Support - Technical assistance\nWould you like more details about any of these?"
+  - text: 'We offer the following services:
 
+      • Consultation - Expert advice sessions
+
+      • Demo - Product demonstrations
+
+      • Support - Technical assistance
+
+      Would you like more details about any of these?'
   utter_provide_pricing:
-    - text: "Our pricing varies by service:\n• Consultation: $50/hour\n• Demo: Free\n• Support: $75/hour\nContact us for a custom quote!"
+  - text: 'Our pricing varies by service:
 
+      • Consultation: $50/hour
+
+      • Demo: Free
+
+      • Support: $75/hour
+
+      Contact us for a custom quote!'
   utter_provide_location:
-    - text: "We're located at:\n📍 123 Business Street, Suite 100\nCity, State 12345\n\nYou can find us on Google Maps."
+  - text: 'We''re located at:
 
+      📍 123 Business Street, Suite 100
+
+      City, State 12345
+
+
+      You can find us on Google Maps.'
   utter_provide_policy:
-    - text: "Our policies:\n• Cancellation: Free up to 24 hours before\n• Refunds: Processed within 5-7 business days\n• Privacy: We never share your data\n\nNeed more details on any policy?"
+  - text: 'Our policies:
 
+      • Cancellation: Free up to 24 hours before
+
+      • Refunds: Processed within 5-7 business days
+
+      • Privacy: We never share your data
+
+
+      Need more details on any policy?'
   utter_faq_response:
-    - text: "Here are some common questions:\n• What services do you offer?\n• What are your hours?\n• How can I contact you?\n\nAsk me any of these!"
+  - text: 'Here are some common questions:
 
+      • What services do you offer?
+
+      • What are your hours?
+
+      • How can I contact you?
+
+
+      Ask me any of these!'
+  utter_ask_knowledge_base:
+  - text: Let me search our knowledge base for that information...
+  utter_llm_thinking:
+  - text: Let me think about that...
+  utter_llm_unavailable:
+  - text: I'm sorry, I can't provide an AI-powered response right now. Please try rephrasing your question or contact support.
 actions:
-  - utter_greet
-  - utter_goodbye
-  - utter_thank_you_response
-  - utter_iamabot
-  - utter_happy
-  - utter_cheer_up
-  - utter_default
-  - utter_out_of_scope
-  - utter_provide_contact
-  - utter_provide_hours
-  - utter_provide_services
-  - utter_provide_pricing
-  - utter_provide_location
-  - utter_provide_policy
-  - utter_faq_response
-
+- utter_greet
+- utter_goodbye
+- utter_thank_you_response
+- utter_iamabot
+- utter_happy
+- utter_cheer_up
+- utter_default
+- utter_out_of_scope
+- utter_provide_contact
+- utter_provide_hours
+- utter_provide_services
+- utter_provide_pricing
+- utter_provide_location
+- utter_provide_policy
+- utter_faq_response
+- utter_ask_knowledge_base
+- utter_llm_thinking
+- utter_llm_unavailable
+- action_answer_from_knowledge_base
+- action_llm_response
+- action_llm_fallback
 session_config:
   session_expiration_time: 60
   carry_over_slots_to_new_session: true

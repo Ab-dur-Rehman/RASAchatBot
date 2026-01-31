@@ -19,7 +19,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     gcc \
+    g++ \
     libpq-dev \
+    libxml2-dev \
+    libxslt1-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
@@ -33,6 +36,9 @@ RUN pip install --no-cache-dir -r requirements-admin.txt
 
 # Copy admin code
 COPY admin /app/admin
+
+# Create directories for uploads and knowledge base
+RUN mkdir -p /app/knowledge_base/data
 
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

@@ -129,7 +129,60 @@ async def update_bot_config(
     # Invalidate cache
     await invalidate_config_cache("bot_config")
     
+    # Sync to RASA domain.yml file
+    await sync_config_to_rasa_domain(config)
+    
     return config.dict()
+
+
+async def sync_config_to_rasa_domain(config: BotConfig):
+    """Sync bot configuration to RASA domain.yml responses."""
+    import yaml
+    import os
+    from pathlib import Path
+    
+    rasa_dir = Path(os.getenv("RASA_DIR", "/app/rasa"))
+    domain_file = rasa_dir / "domain.yml"
+    
+    if not domain_file.exists():
+        return
+    
+    try:
+        with open(domain_file, 'r', encoding='utf-8') as f:
+            domain_data = yaml.safe_load(f) or {}
+        
+        if 'responses' not in domain_data:
+            domain_data['responses'] = {}
+        
+        # Update greet response with welcome message
+        domain_data['responses']['utter_greet'] = [
+            {"text": config.welcome_message}
+        ]
+        
+        # Update fallback/default response
+        domain_data['responses']['utter_default'] = [
+            {"text": config.fallback_message}
+        ]
+        
+        # Update contact info response
+        contact_text = f"You can reach us at:\n📧 Email: {config.contact_email}\n📞 Phone: {config.contact_phone}"
+        domain_data['responses']['utter_provide_contact'] = [
+            {"text": contact_text}
+        ]
+        
+        # Update hours response
+        hours = config.business_hours
+        hours_text = f"We're open Monday to Friday, {hours.start} to {hours.end}. We're closed on weekends and holidays."
+        domain_data['responses']['utter_provide_hours'] = [
+            {"text": hours_text}
+        ]
+        
+        with open(domain_file, 'w', encoding='utf-8') as f:
+            yaml.dump(domain_data, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+            
+    except Exception as e:
+        # Log error but don't fail the request
+        print(f"Warning: Could not sync config to domain.yml: {e}")
 
 
 # =============================================================================
