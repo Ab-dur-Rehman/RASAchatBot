@@ -4,8 +4,6 @@
 # Multi-container deployment for the complete chatbot system
 # =============================================================================
 
-version: "3.8"
-
 services:
   # ===========================================================================
   # RASA SERVER - Core NLU and Dialogue Management
@@ -254,10 +252,11 @@ services:
     networks:
       - chatbot-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags || exit 1"]
       interval: 30s
       timeout: 10s
-      retries: 3
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   # Ollama with GPU support (requires NVIDIA GPU + drivers)

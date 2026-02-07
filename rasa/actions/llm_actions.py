@@ -48,10 +48,14 @@ class LLMClient:
         
         if self.provider == "openai":
             return await self._call_openai(messages)
+        elif self.provider == "azure_openai":
+            return await self._call_azure_openai(messages)
         elif self.provider == "anthropic":
             return await self._call_anthropic(messages)
         elif self.provider == "ollama":
             return await self._call_ollama(messages)
+        elif self.provider == "google":
+            return await self._call_google(messages)
         else:
             return await self._call_openai(messages)  # Default to OpenAI
     
@@ -84,7 +88,10 @@ class LLMClient:
             
             client = anthropic.AsyncAnthropic(api_key=self.api_key)
             
-            system_msg = messages[0]["content"] if messages[0]["role"] == "system" else ""
+            # Concatenate all system messages
+            system_parts = [m["content"] for m in messages if m["role"] == "system"]
+            system_msg = "\n\n".join(system_parts) if system_parts else ""
+            
             anthropic_messages = [
                 {"role": m["role"], "content": m["content"]}
                 for m in messages if m["role"] != "system"
@@ -106,14 +113,63 @@ class LLMClient:
             logger.error(f"Anthropic error: {e}")
             return {"success": False, "error": str(e)}
     
+    async def _call_azure_openai(self, messages: List[Dict]) -> Dict[str, Any]:
+        """Call Azure OpenAI API."""
+        try:
+            import openai
+            
+            client = openai.AsyncAzureOpenAI(
+                api_key=self.api_key,
+                api_version="2024-02-15-preview",
+                azure_endpoint=self.api_base_url
+            )
+            
+            response = await client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens
+            )
+            
+            return {
+                "success": True,
+                "response": response.choices[0].message.content,
+                "model": self.model
+            }
+        except Exception as e:
+            logger.error(f"Azure OpenAI error: {e}")
+            return {"success": False, "error": str(e)}
+    
     async def _call_ollama(self, messages: List[Dict]) -> Dict[str, Any]:
-        """Call Ollama API."""
+        """Call Ollama API with auto-pull support."""
         import aiohttp
         
         base_url = self.api_base_url or "http://ollama:11434"
         
         try:
             async with aiohttp.ClientSession() as session:
+                # Check if model is available and auto-pull if not
+                try:
+                    async with session.get(
+                        f"{base_url}/api/tags",
+                        timeout=aiohttp.ClientTimeout(total=10)
+                    ) as tags_resp:
+                        tags_data = await tags_resp.json()
+                        available = [m["name"].split(":")[0] for m in tags_data.get("models", [])]
+                        model_base = self.model.split(":")[0]
+                        
+                        if model_base not in available:
+                            logger.info(f"Pulling Ollama model '{self.model}'...")
+                            async with session.post(
+                                f"{base_url}/api/pull",
+                                json={"name": self.model, "stream": False},
+                                timeout=aiohttp.ClientTimeout(total=600)
+                            ) as pull_resp:
+                                await pull_resp.json()
+                            logger.info(f"Model '{self.model}' pulled successfully.")
+                except aiohttp.ClientConnectorError:
+                    return {"success": False, "error": f"Cannot connect to Ollama at {base_url}"}
+                
                 async with session.post(
                     f"{base_url}/api/chat",
                     json={
@@ -125,7 +181,7 @@ class LLMClient:
                             "num_predict": self.max_tokens
                         }
                     },
-                    timeout=aiohttp.ClientTimeout(total=60)
+                    timeout=aiohttp.ClientTimeout(total=120)
                 ) as response:
                     data = await response.json()
                     return {
@@ -135,6 +191,54 @@ class LLMClient:
                     }
         except Exception as e:
             logger.error(f"Ollama error: {e}")
+            return {"success": False, "error": str(e)}
+    
+    async def _call_google(self, messages: List[Dict]) -> Dict[str, Any]:
+        """Call Google Gemini API."""
+        try:
+            from google import genai
+            from google.genai import types
+            
+            client = genai.Client(api_key=self.api_key)
+            
+            # Extract system prompt and build contents
+            system_prompt = None
+            contents = []
+            for m in messages:
+                if m["role"] == "system":
+                    if system_prompt is None:
+                        system_prompt = m["content"]
+                    else:
+                        system_prompt += "\n" + m["content"]
+                else:
+                    role = "model" if m["role"] == "assistant" else "user"
+                    contents.append(
+                        types.Content(
+                            role=role,
+                            parts=[types.Part.from_text(text=m["content"])]
+                        )
+                    )
+            
+            config = types.GenerateContentConfig(
+                temperature=self.temperature,
+                max_output_tokens=self.max_tokens,
+            )
+            if system_prompt:
+                config.system_instruction = system_prompt
+            
+            response = await client.aio.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config
+            )
+            
+            return {
+                "success": True,
+                "response": response.text,
+                "model": self.model
+            }
+        except Exception as e:
+            logger.error(f"Google Gemini error: {e}")
             return {"success": False, "error": str(e)}
 
 

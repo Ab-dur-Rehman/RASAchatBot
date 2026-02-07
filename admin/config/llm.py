@@ -202,7 +202,27 @@ class LLMClient:
         base_url = self.api_base_url or "http://ollama:11434"
         
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                # Check if model is available
+                try:
+                    tags_resp = await client.get(f"{base_url}/api/tags")
+                    tags_resp.raise_for_status()
+                    available_models = [m["name"].split(":")[0] for m in tags_resp.json().get("models", [])]
+                    model_base = self.model.split(":")[0]
+                    
+                    if model_base not in available_models:
+                        # Auto-pull the model
+                        logger.info(f"Model '{self.model}' not found locally. Pulling...")
+                        pull_resp = await client.post(
+                            f"{base_url}/api/pull",
+                            json={"name": self.model, "stream": False},
+                            timeout=600.0  # 10 min timeout for model download
+                        )
+                        pull_resp.raise_for_status()
+                        logger.info(f"Model '{self.model}' pulled successfully.")
+                except httpx.ConnectError:
+                    return {"success": False, "error": f"Cannot connect to Ollama at {base_url}. Ensure Ollama is running."}
+                
                 response = await client.post(
                     f"{base_url}/api/chat",
                     json={
@@ -231,18 +251,41 @@ class LLMClient:
     async def _call_google(self, messages: List[Dict]) -> Dict[str, Any]:
         """Call Google Gemini API."""
         try:
-            import google.generativeai as genai
+            from google import genai
+            from google.genai import types
             
-            genai.configure(api_key=self.api_key)
-            model = genai.GenerativeModel(self.model)
+            client = genai.Client(api_key=self.api_key)
             
-            # Combine messages into a single prompt
-            prompt = "\n".join([
-                f"{m['role'].upper()}: {m['content']}"
-                for m in messages
-            ])
+            # Extract system prompt and build contents
+            system_prompt = None
+            contents = []
+            for m in messages:
+                if m["role"] == "system":
+                    if system_prompt is None:
+                        system_prompt = m["content"]
+                    else:
+                        system_prompt += "\n" + m["content"]
+                else:
+                    role = "model" if m["role"] == "assistant" else "user"
+                    contents.append(
+                        types.Content(
+                            role=role,
+                            parts=[types.Part.from_text(text=m["content"])]
+                        )
+                    )
             
-            response = await model.generate_content_async(prompt)
+            config = types.GenerateContentConfig(
+                temperature=self.temperature,
+                max_output_tokens=self.max_tokens,
+            )
+            if system_prompt:
+                config.system_instruction = system_prompt
+            
+            response = await client.aio.models.generate_content(
+                model=self.model,
+                contents=contents,
+                config=config
+            )
             
             return {
                 "success": True,
@@ -253,7 +296,7 @@ class LLMClient:
         except ImportError:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Google GenerativeAI package not installed"
+                detail="Google GenAI package not installed. Install with: pip install google-genai"
             )
         except Exception as e:
             logger.error(f"Google API error: {e}")
@@ -474,21 +517,23 @@ async def list_available_models(
             "google": {
                 "name": "Google",
                 "models": [
-                    {"id": "gemini-1.5-pro", "name": "Gemini 1.5 Pro", "description": "Advanced reasoning"},
-                    {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "description": "Fast responses"}
+                    {"id": "gemini-2.0-flash", "name": "Gemini 2.0 Flash (Recommended)", "description": "Fast and capable"},
+                    {"id": "gemini-2.0-flash-lite", "name": "Gemini 2.0 Flash Lite", "description": "Lightweight and fast"},
+                    {"id": "gemini-1.5-flash", "name": "Gemini 1.5 Flash", "description": "Previous gen fast model"}
                 ],
                 "requires_key": True
             },
             "ollama": {
                 "name": "Ollama (Local)",
                 "models": [
+                    {"id": "phi3", "name": "Phi-3 (Recommended)", "description": "Microsoft's efficient model - pre-installed"},
                     {"id": "llama3.2", "name": "Llama 3.2", "description": "Meta's open model"},
                     {"id": "mistral", "name": "Mistral 7B", "description": "Efficient open model"},
                     {"id": "codellama", "name": "Code Llama", "description": "Code-focused"},
-                    {"id": "phi3", "name": "Phi-3", "description": "Microsoft's small model"}
+                    {"id": "gemma2:2b", "name": "Gemma 2 2B", "description": "Google's small model"}
                 ],
                 "requires_key": False,
-                "note": "Requires Ollama server running locally or in Docker"
+                "note": "Models will be auto-downloaded on first use"
             },
             "azure_openai": {
                 "name": "Azure OpenAI",
