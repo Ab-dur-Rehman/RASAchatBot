@@ -29,7 +29,11 @@ WORKDIR /app
 # Copy requirements first for caching
 COPY requirements-actions.txt .
 
-# Install Python dependencies
+# Install CPU-only PyTorch first (~200MB vs ~915MB for full version)
+# This satisfies the torch dependency for sentence-transformers/chromadb
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+
+# Install remaining Python dependencies (torch already satisfied, will be skipped)
 RUN pip install --no-cache-dir -r requirements-actions.txt
 
 # Copy action code
