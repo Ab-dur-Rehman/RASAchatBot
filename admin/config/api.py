@@ -552,14 +552,14 @@ async def get_audit_logs(
 
 async def invalidate_config_cache(key: str):
     """Invalidate Redis cache for configuration."""
-    import aioredis
+    import redis.asyncio as aioredis
     import os
     
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     try:
-        redis = await aioredis.from_url(redis_url)
-        await redis.delete(f"config:{key}")
-        await redis.close()
+        r = aioredis.from_url(redis_url)
+        await r.delete(f"config:{key}")
+        await r.aclose()
     except Exception:
         # Log but don't fail if cache invalidation fails
         pass

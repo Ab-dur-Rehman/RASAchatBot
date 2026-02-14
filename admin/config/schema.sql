@@ -253,14 +253,8 @@ VALUES (1, '{
 }'::jsonb)
 ON CONFLICT (id) DO NOTHING;
 
--- Add trigger for llm_config
-CREATE TRIGGER update_llm_config_updated_at
-    BEFORE UPDATE ON llm_config
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
 -- =============================================================================
--- FUNCTIONS AND TRIGGERS
+-- FUNCTIONS (must be defined BEFORE triggers that reference them)
 -- =============================================================================
 
 -- Function to update updated_at timestamp
@@ -272,7 +266,12 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Apply trigger to relevant tables
+-- Apply triggers to all tables
+CREATE TRIGGER update_llm_config_updated_at
+    BEFORE UPDATE ON llm_config
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_bot_config_updated_at
     BEFORE UPDATE ON bot_config
     FOR EACH ROW

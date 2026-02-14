@@ -78,7 +78,6 @@ class ChromaDBClient:
     
     def __init__(self):
         self._client = None
-        self._embedding_function = None
     
     def get_client(self):
         """Get or create ChromaDB client."""
@@ -101,31 +100,20 @@ class ChromaDBClient:
                 )
         return self._client
     
-    def get_embedding_function(self):
-        """Get embedding function."""
-        if self._embedding_function is None:
-            try:
-                from chromadb.utils import embedding_functions
-                model = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-                self._embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-                    model_name=model
-                )
-            except Exception as e:
-                logger.error(f"Failed to initialize embeddings: {e}")
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail=f"Embedding model not available: {str(e)}"
-                )
-        return self._embedding_function
-    
     def get_collection(self, name: str = DEFAULT_COLLECTION):
-        """Get or create a collection."""
+        """Get or create a collection with default embedding function."""
         client = self.get_client()
-        embedding_fn = self.get_embedding_function()
+        try:
+            from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+            embedding_fn = DefaultEmbeddingFunction()
+        except ImportError:
+            logger.warning("Default embedding function not available, collection may fail on add")
+            embedding_fn = None
+        
         return client.get_or_create_collection(
             name=name,
-            embedding_function=embedding_fn,
-            metadata={"hnsw:space": "cosine"}
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=embedding_fn
         )
 
 
@@ -356,16 +344,18 @@ async def upload_document(
         )
         
         # Save metadata to database
+        import json as _json
+        metadata_str = _json.dumps({"file_type": file_ext, "size_bytes": len(content)})
         await conn.execute("""
             INSERT INTO content_sources (id, name, source_type, location, collection_name,
                                         document_count, chunk_count, last_ingested, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8::jsonb)
             ON CONFLICT (id) DO UPDATE SET
                 document_count = $6,
                 chunk_count = $7,
                 last_ingested = NOW()
         """, doc_id, file.filename, 'file', str(file_path), collection,
-             1, len(chunks), {"file_type": file_ext, "size_bytes": len(content)})
+             1, len(chunks), metadata_str)
         
         return {
             "success": True,
@@ -459,16 +449,18 @@ async def import_from_url(
         )
         
         # Save to database
+        import json as _json
+        metadata_str = _json.dumps({"title": title})
         await conn.execute("""
             INSERT INTO content_sources (id, name, source_type, location, collection_name,
                                         document_count, chunk_count, last_ingested, metadata)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), $8::jsonb)
             ON CONFLICT (id) DO UPDATE SET
                 document_count = $6,
                 chunk_count = $7,
                 last_ingested = NOW()
         """, doc_id, title[:255], 'url', url, collection,
-             1, len(chunks), {"title": title})
+             1, len(chunks), metadata_str)
         
         return {
             "success": True,

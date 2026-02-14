@@ -406,27 +406,52 @@ training_status = {"is_training": False, "last_trained": None, "last_error": Non
 
 
 def run_training():
-    """Background task to run RASA training."""
+    """Background task to run RASA training via the RASA server HTTP API."""
+    import httpx
+    
     global training_status
     training_status["is_training"] = True
     training_status["last_error"] = None
     
+    rasa_url = os.getenv("RASA_URL", "http://rasa:5005")
+    
     try:
-        # Run RASA train command
-        result = subprocess.run(
-            ["rasa", "train", "--force"],
-            cwd=str(RASA_DIR),
-            capture_output=True,
-            text=True,
-            timeout=600  # 10 minute timeout
-        )
+        # Build training payload from local RASA files
+        config_path = RASA_DIR / "config.yml"
+        domain_path = RASA_DIR / "domain.yml"
+        nlu_path = RASA_DIR / "data" / "nlu.yml"
+        rules_path = RASA_DIR / "data" / "rules.yml"
+        stories_path = RASA_DIR / "data" / "stories.yml"
         
-        if result.returncode == 0:
+        # Read training files
+        config_content = config_path.read_text() if config_path.exists() else ""
+        domain_content = domain_path.read_text() if domain_path.exists() else ""
+        
+        # Combine all training data files
+        training_files = ""
+        for data_file in [nlu_path, rules_path, stories_path]:
+            if data_file.exists():
+                training_files += data_file.read_text() + "\n"
+        
+        # POST to RASA server training endpoint
+        with httpx.Client(timeout=600.0) as client:
+            response = client.post(
+                f"{rasa_url}/model/train",
+                json={
+                    "config": config_content,
+                    "domain": domain_content,
+                    "nlu": training_files,
+                    "force": True,
+                },
+                headers={"Content-Type": "application/json"},
+            )
+        
+        if response.status_code == 200:
             training_status["last_trained"] = datetime.utcnow().isoformat()
         else:
-            training_status["last_error"] = result.stderr
+            training_status["last_error"] = f"RASA training failed (HTTP {response.status_code}): {response.text}"
             
-    except subprocess.TimeoutExpired:
+    except httpx.TimeoutException:
         training_status["last_error"] = "Training timed out after 10 minutes"
     except Exception as e:
         training_status["last_error"] = str(e)

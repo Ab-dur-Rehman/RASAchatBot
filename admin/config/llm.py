@@ -316,14 +316,21 @@ def mask_api_key(key: Optional[str]) -> Optional[str]:
 
 async def get_llm_config(conn: asyncpg.Connection) -> Dict[str, Any]:
     """Get LLM configuration from database."""
-    row = await conn.fetchrow("SELECT * FROM llm_config WHERE id = 1")
-    if row:
-        config = dict(row)
-        # Parse JSON fields
-        if isinstance(config.get('config'), str):
-            config['config'] = json.loads(config['config'])
-        return config.get('config', DEFAULT_LLM_CONFIG)
-    return DEFAULT_LLM_CONFIG
+    try:
+        row = await conn.fetchrow("SELECT * FROM llm_config WHERE id = 1")
+        if row:
+            config = dict(row)
+            config_data = config.get('config')
+            # asyncpg returns JSONB as dict already, but handle string case too
+            if isinstance(config_data, str):
+                config_data = json.loads(config_data)
+            if isinstance(config_data, dict):
+                return config_data
+            return DEFAULT_LLM_CONFIG
+        return DEFAULT_LLM_CONFIG
+    except Exception as e:
+        logger.error(f"Error loading LLM config: {e}")
+        return DEFAULT_LLM_CONFIG
 
 
 async def get_kb_context(query: str, collection: str = "website_content") -> str:

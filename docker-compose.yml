@@ -29,6 +29,8 @@ services:
       - --enable-api
       - --cors
       - "*"
+      - --endpoints
+      - endpoints.yml
       - --debug
     depends_on:
       postgres:
@@ -112,6 +114,7 @@ services:
       - UPLOAD_DIR=/app/knowledge_base/data
       - KB_COLLECTION=website_content
       - EMBEDDING_MODEL=all-MiniLM-L6-v2
+      - RASA_URL=http://rasa:5005
     volumes:
       - ./rasa:/app/rasa:rw
       - ./knowledge_base:/app/knowledge_base:rw
@@ -128,8 +131,9 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-    restart: unless-stopped
+      retries: 5
+      start_period: 45s
+    restart: on-failure:5
 
   # ===========================================================================
   # DUCKLING - Entity Extraction (dates, times, etc.)
@@ -252,7 +256,7 @@ services:
     networks:
       - chatbot-network
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:11434/api/tags || exit 1"]
+      test: ["CMD-SHELL", "ollama list || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5

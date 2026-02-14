@@ -48,6 +48,12 @@ from .utility_actions import (
     ActionCollectCallbackInfo,
 )
 
+from .llm_actions import (
+    ActionAnswerFromKnowledgeBase,
+    ActionLLMResponse,
+    ActionLLMFallback,
+)
+
 # Export all actions
 __all__ = [
     # Booking Actions
@@ -81,4 +87,9 @@ __all__ = [
     "ActionLogInteraction",
     "ActionHandoffToHuman",
     "ActionCollectCallbackInfo",
+    
+    # LLM Actions
+    "ActionAnswerFromKnowledgeBase",
+    "ActionLLMResponse",
+    "ActionLLMFallback",
 ]

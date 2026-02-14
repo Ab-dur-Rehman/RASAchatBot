@@ -19,6 +19,7 @@ intents:
 - ask_knowledge_base
 - out_of_scope
 - nlu_fallback
+- ask_shipping_info
 entities:
 - info_type
 slots:
@@ -124,7 +125,8 @@ responses:
   utter_llm_thinking:
   - text: Let me think about that...
   utter_llm_unavailable:
-  - text: I'm sorry, I can't provide an AI-powered response right now. Please try rephrasing your question or contact support.
+  - text: I'm sorry, I can't provide an AI-powered response right now. Please try
+      rephrasing your question or contact support.
 actions:
 - utter_greet
 - utter_goodbye

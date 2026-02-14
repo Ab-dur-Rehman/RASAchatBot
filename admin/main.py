@@ -4,6 +4,7 @@
 # FastAPI application entry point
 # =============================================================================
 
+import asyncio
 from contextlib import asynccontextmanager
 from typing import Dict
 
@@ -27,16 +28,32 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown."""
     global db_pool
     
-    # Startup
-    db_pool = await asyncpg.create_pool(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=int(os.getenv("DB_PORT", 5432)),
-        database=os.getenv("DB_NAME", "chatbot"),
-        user=os.getenv("DB_USER", "rasa"),
-        password=os.getenv("DB_PASSWORD", "rasa_password"),
-        min_size=5,
-        max_size=20
-    )
+    # Startup with retry logic
+    max_retries = 5
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            db_pool = await asyncpg.create_pool(
+                host=os.getenv("DB_HOST", "localhost"),
+                port=int(os.getenv("DB_PORT", 5432)),
+                database=os.getenv("DB_NAME", "chatbot"),
+                user=os.getenv("DB_USER", "rasa"),
+                password=os.getenv("DB_PASSWORD", "rasa_password"),
+                min_size=5,
+                max_size=20,
+                timeout=10
+            )
+            print("Database connection established successfully.")
+            break
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"DB connection failed (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {retry_delay}s...")
+                await asyncio.sleep(retry_delay)
+                retry_delay *= 2  # Exponential backoff
+            else:
+                print(f"Failed to connect to database after {max_retries} attempts: {e}")
+                raise
     
     # Import and set pool in config modules
     from .config import api, knowledge_base, llm

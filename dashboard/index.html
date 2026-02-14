@@ -518,7 +518,7 @@
                     
                     <div class="form-group" id="api-url-group" style="display: none;">
                         <label>API Base URL (for Ollama/Azure)</label>
-                        <input type="text" id="llm-api-url" placeholder="http://localhost:11434">
+                        <input type="text" id="llm-api-url" placeholder="http://ollama:11434">
                     </div>
                     
                     <div class="form-row">
@@ -1044,22 +1044,42 @@
             const select = document.getElementById('train-intent');
             select.innerHTML = '<option value="">-- Loading intents... --</option>';
             
-            // If currentIntents is empty, fetch from API
+            // Try Admin API first (more reliable), then RASA as fallback
             if (currentIntents.length === 0) {
                 try {
-                    const response = await fetch(`${ADMIN_API}/domain`);
+                    const response = await fetch(`${ADMIN_URL}/api/training/intents`);
                     if (response.ok) {
                         const data = await response.json();
                         if (data.intents && Array.isArray(data.intents)) {
-                            currentIntents = data.intents;
+                            currentIntents = data.intents.map(i => typeof i === 'string' ? i : i.name);
                         }
                     }
                 } catch (error) {
-                    console.error('Error fetching intents:', error);
+                    console.error('Error fetching intents from Admin API:', error);
+                }
+                
+                // Fallback to RASA domain if Admin API failed
+                if (currentIntents.length === 0) {
+                    try {
+                        const response = await fetch(`${RASA_URL}/domain`);
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.intents && Array.isArray(data.intents)) {
+                                currentIntents = data.intents;
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error fetching intents from RASA:', error);
+                    }
                 }
             }
             
             select.innerHTML = '<option value="">-- Select an intent --</option>';
+            
+            if (currentIntents.length === 0) {
+                select.innerHTML = '<option value="">-- No intents found (check API) --</option>';
+                return;
+            }
             
             currentIntents.forEach(intent => {
                 const option = document.createElement('option');

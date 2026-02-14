@@ -29,7 +29,6 @@ class KnowledgeBaseClient:
         # Lazy initialization of ChromaDB client
         self._client = None
         self._collection = None
-        self._embedding_function = None
     
     def _get_client(self):
         """Lazy initialization of ChromaDB client."""
@@ -57,43 +56,16 @@ class KnowledgeBaseClient:
         
         return self._client
     
-    def _get_embedding_function(self):
-        """Get embedding function for semantic search."""
-        if self._embedding_function is None:
-            try:
-                from chromadb.utils import embedding_functions
-                
-                # Use sentence-transformers for embeddings
-                # Can be switched to OpenAI embeddings if preferred
-                embedding_model = os.getenv(
-                    "EMBEDDING_MODEL",
-                    "all-MiniLM-L6-v2"
-                )
-                
-                self._embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-                    model_name=embedding_model
-                )
-                
-                logger.info(f"Using embedding model: {embedding_model}")
-                
-            except Exception as e:
-                logger.error(f"Failed to initialize embedding function: {e}")
-                raise
-        
-        return self._embedding_function
-    
     def _get_collection(self, collection_name: Optional[str] = None):
-        """Get or create a collection."""
+        """Get or create a collection (uses ChromaDB server-side default embeddings)."""
         name = collection_name or self.collection_name
         
         if self._collection is None or collection_name:
             try:
                 client = self._get_client()
-                embedding_fn = self._get_embedding_function()
                 
                 self._collection = client.get_or_create_collection(
                     name=name,
-                    embedding_function=embedding_fn,
                     metadata={"hnsw:space": "cosine"}
                 )
                 

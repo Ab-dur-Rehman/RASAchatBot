@@ -21,7 +21,7 @@ This module defines:
 """
 
 from datetime import datetime, time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from enum import Enum
 
 from pydantic import BaseModel, Field, EmailStr, validator
@@ -105,7 +105,7 @@ class TaskConfigBase(BaseModel):
 
 class BookingTaskConfig(TaskConfigBase):
     """Configuration specific to booking tasks."""
-    task_type: str = Field("book_service", const=True)
+    task_type: Literal["book_service"] = "book_service"
     services: List[ServiceConfig] = Field(
         default_factory=list,
         description="Available services"
@@ -125,7 +125,7 @@ class BookingTaskConfig(TaskConfigBase):
 
 class MeetingTaskConfig(TaskConfigBase):
     """Configuration specific to meeting tasks."""
-    task_type: str = Field("schedule_meeting", const=True)
+    task_type: Literal["schedule_meeting"] = "schedule_meeting"
     meeting_types: List[str] = Field(
         default_factory=lambda: ["Sales call", "Technical consultation", "General inquiry"],
         description="Available meeting types"
@@ -140,7 +140,7 @@ class MeetingTaskConfig(TaskConfigBase):
 
 class CancelTaskConfig(BaseModel):
     """Configuration for cancellation tasks."""
-    task_type: str = Field("cancel_booking", const=True)
+    task_type: Literal["cancel_booking"] = "cancel_booking"
     enabled: bool = Field(True)
     require_confirmation: bool = Field(True)
     cancellation_policy: str = Field("Free cancellation up to 24 hours before")
