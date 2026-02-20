@@ -16,9 +16,13 @@ psycopg2-binary==2.9.9
 # Redis
 redis==4.6.0
 
-# Vector store - HTTP client only (server runs in its own container)
-chromadb-client==0.5.23
+# Vector store - HTTP client with embedding support
+chromadb==0.5.23
 numpy==1.26.4
+
+# Embedding model (required for ChromaDB DefaultEmbeddingFunction)
+onnxruntime>=1.14.0
+tokenizers>=0.13.0
 
 # Data validation
 pydantic==2.9.2

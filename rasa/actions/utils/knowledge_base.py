@@ -57,16 +57,28 @@ class KnowledgeBaseClient:
         return self._client
     
     def _get_collection(self, collection_name: Optional[str] = None):
-        """Get or create a collection (uses ChromaDB server-side default embeddings)."""
+        """Get or create a collection with embedding function for queries."""
         name = collection_name or self.collection_name
         
         if self._collection is None or collection_name:
             try:
                 client = self._get_client()
                 
+                # Must provide embedding function for query-time embedding
+                embedding_fn = None
+                try:
+                    from chromadb.utils.embedding_functions import DefaultEmbeddingFunction
+                    embedding_fn = DefaultEmbeddingFunction()
+                except ImportError:
+                    logger.warning(
+                        "DefaultEmbeddingFunction not available. "
+                        "Install sentence-transformers or chromadb (full) package."
+                    )
+                
                 self._collection = client.get_or_create_collection(
                     name=name,
-                    metadata={"hnsw:space": "cosine"}
+                    metadata={"hnsw:space": "cosine"},
+                    embedding_function=embedding_fn
                 )
                 
             except Exception as e:

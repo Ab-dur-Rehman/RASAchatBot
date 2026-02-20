@@ -40,6 +40,9 @@ numpy==1.26.4
 beautifulsoup4==4.12.3
 lxml==5.2.2
 
+# Web scraping (bypass bot protection)
+cloudscraper==1.2.71
+
 # LLM providers
 openai==1.51.0
 anthropic==0.34.2

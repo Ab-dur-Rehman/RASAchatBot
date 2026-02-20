@@ -387,48 +387,126 @@ async def import_from_url(
     user: dict = Depends(verify_token)
 ) -> Dict[str, Any]:
     """Import content from a URL."""
-    import httpx
+    
+    content = None
+    fetch_method = None
+    
+    # -------------------------------------------------------------------------
+    # Strategy 1: cloudscraper (handles Cloudflare/bot protection)
+    # -------------------------------------------------------------------------
+    try:
+        import cloudscraper
+        scraper = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True,
+            }
+        )
+        response = scraper.get(url, timeout=30)
+        response.raise_for_status()
+        content = response.text
+        fetch_method = "cloudscraper"
+        logger.info(f"URL fetched successfully with cloudscraper: {url}")
+    except Exception as e:
+        logger.warning(f"cloudscraper failed for {url}: {e}")
+    
+    # -------------------------------------------------------------------------
+    # Strategy 2: httpx with browser-like headers
+    # -------------------------------------------------------------------------
+    if content is None:
+        try:
+            import httpx
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Connection": "keep-alive",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Cache-Control": "max-age=0",
+            }
+            async with httpx.AsyncClient(
+                timeout=30.0,
+                headers=headers,
+                follow_redirects=True,
+                http2=True,
+            ) as client:
+                response = await client.get(url)
+                response.raise_for_status()
+                content = response.text
+                fetch_method = "httpx"
+                logger.info(f"URL fetched successfully with httpx: {url}")
+        except Exception as e:
+            logger.warning(f"httpx failed for {url}: {e}")
+    
+    # -------------------------------------------------------------------------
+    # Strategy 3: urllib with cookie jar (basic fallback)
+    # -------------------------------------------------------------------------
+    if content is None:
+        try:
+            import urllib.request
+            import http.cookiejar
+            cj = http.cookiejar.CookieJar()
+            opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+            req = urllib.request.Request(url, headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            })
+            resp = opener.open(req, timeout=30)
+            content = resp.read().decode('utf-8', errors='ignore')
+            fetch_method = "urllib"
+            logger.info(f"URL fetched successfully with urllib: {url}")
+        except Exception as e:
+            logger.warning(f"urllib failed for {url}: {e}")
+    
+    # All strategies failed
+    if content is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Failed to fetch URL: {url}. The website may be blocking automated access. "
+                "Try downloading the page as an HTML file and uploading it instead."
+            )
+        )
     
     try:
-        # Fetch URL content
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url, follow_redirects=True)
-            response.raise_for_status()
-            content = response.text
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(content, 'html.parser')
         
-        # Process HTML content
-        try:
-            from bs4 import BeautifulSoup
-            soup = BeautifulSoup(content, 'html.parser')
-            
-            # Get title
-            title = soup.title.string if soup.title else url
-            
-            # Remove unwanted elements
-            for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
-                tag.decompose()
-            
-            # Get main content
-            main_content = soup.find('main') or soup.find('article') or soup.find('body')
-            text_content = main_content.get_text(separator='\n', strip=True) if main_content else soup.get_text()
-            
-        except ImportError:
-            # Fallback
-            import re
-            text_content = re.sub(r'<[^>]+>', ' ', content)
-            text_content = ' '.join(text_content.split())
-            title = url
+        # Get title
+        title = soup.title.string if soup.title else url
         
-        if not text_content or len(text_content.strip()) < 50:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Could not extract meaningful content from URL"
-            )
+        # Remove unwanted elements
+        for tag in soup(['script', 'style', 'nav', 'footer', 'header', 'aside']):
+            tag.decompose()
         
-        # Chunk and add to ChromaDB
-        doc_id = str(uuid.uuid4())[:8]
-        chunks = chunk_text(text_content)
+        # Get main content
+        main_content = soup.find('main') or soup.find('article') or soup.find('body')
+        text_content = main_content.get_text(separator='\n', strip=True) if main_content else soup.get_text()
         
+    except ImportError:
+        # Fallback
+        import re
+        text_content = re.sub(r'<[^>]+>', ' ', content)
+        text_content = ' '.join(text_content.split())
+        title = url
+    
+    if not text_content or len(text_content.strip()) < 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Could not extract meaningful content from URL"
+        )
+    
+    # Chunk and add to ChromaDB
+    doc_id = str(uuid.uuid4())[:8]
+    chunks = chunk_text(text_content)
+    
+    try:
         chroma_collection = chroma_client.get_collection(collection)
         chunk_ids = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
         metadatas = [
@@ -468,13 +546,17 @@ async def import_from_url(
             "title": title,
             "url": url,
             "chunks_created": len(chunks),
-            "collection": collection
+            "collection": collection,
+            "fetch_method": fetch_method
         }
         
-    except httpx.HTTPError as e:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error processing URL content: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to fetch URL: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing URL content: {str(e)}"
         )
 
 

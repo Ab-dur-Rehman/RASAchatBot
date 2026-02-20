@@ -7,6 +7,7 @@
 import os
 import json
 import logging
+import asyncio
 from typing import Any, Dict, List, Text, Optional
 
 from rasa_sdk import Action, Tracker
@@ -407,10 +408,12 @@ class ActionLLMResponse(Action):
 
 class ActionLLMFallback(Action):
     """
-    LLM fallback action for when RASA confidence is low.
+    Smart fallback action for when RASA NLU confidence is low.
     
-    This action is triggered by the FallbackClassifier when confidence
-    is below the threshold. It uses the LLM to generate a response.
+    Follows this priority chain:
+    1. Search Knowledge Base - if good results found, answer directly
+    2. Use LLM (with KB context if available) - if LLM is configured
+    3. Default response - if neither KB nor LLM can answer
     """
     
     def name(self) -> Text:
@@ -427,64 +430,76 @@ class ActionLLMFallback(Action):
         intent = tracker.latest_message.get("intent", {})
         confidence = intent.get("confidence", 0)
         
-        logger.info(f"LLM fallback triggered. Intent: {intent.get('name')}, Confidence: {confidence}")
+        logger.info(
+            f"Fallback triggered. Intent: {intent.get('name')}, "
+            f"Confidence: {confidence:.3f}, Message: '{user_message}'"
+        )
         
-        # Get LLM config
+        # =================================================================
+        # STEP 1: Try Knowledge Base first (no LLM config required)
+        # =================================================================
+        kb_results = []
+        try:
+            kb_client = KnowledgeBaseClient()
+            kb_results = await kb_client.search(
+                query=user_message,
+                top_k=3,
+                min_score=0.65
+            )
+            logger.info(f"KB search returned {len(kb_results)} results")
+        except Exception as e:
+            logger.warning(f"KB search in fallback failed: {e}")
+        
+        if kb_results:
+            top_result = kb_results[0]
+            logger.info(
+                f"KB hit: score={top_result.get('score')}, "
+                f"source={top_result.get('source')}"
+            )
+            
+            # Return KB results directly
+            content = top_result.get("content", "")[:500]
+            source = top_result.get("source", "Knowledge Base")
+            dispatcher.utter_message(
+                text=f"Here's what I found:\n\n{content}\n\n"
+                     f"📖 *Source: {source}*"
+            )
+            return []
+        
+        # =================================================================
+        # STEP 2: No KB results - Try LLM (if configured)
+        # =================================================================
         llm_config = await get_llm_config()
         
-        if not llm_config or not llm_config.get("fallback_to_llm", False):
-            # LLM fallback not enabled, use default response
-            dispatcher.utter_message(response="utter_default")
-            return []
-        
-        if not llm_config.get("enabled"):
-            dispatcher.utter_message(response="utter_default")
-            return []
-        
-        threshold = llm_config.get("confidence_threshold", 0.6)
-        
-        # Only use LLM if confidence is below threshold
-        if confidence >= threshold:
-            dispatcher.utter_message(response="utter_default")
-            return []
-        
-        if not llm_config.get("api_key") and llm_config.get("provider") != "ollama":
-            dispatcher.utter_message(response="utter_default")
-            return []
-        
-        try:
-            # Try knowledge base first
-            context = ""
-            if llm_config.get("use_knowledge_base", True):
-                try:
-                    kb_client = KnowledgeBaseClient()
-                    results = await kb_client.search(query=user_message, top_k=3)
-                    if results:
-                        context = "\n\n".join([
-                            f"[{r.get('source', 'Unknown')}]: {r.get('content', '')}"
-                            for r in results
-                        ])
-                except Exception as e:
-                    logger.warning(f"KB search in fallback failed: {e}")
-            
-            # Generate LLM response
-            client = LLMClient(llm_config)
-            result = await client.generate(user_message, context)
-            
-            if result.get("success"):
-                response_text = result["response"]
+        if (llm_config and llm_config.get("enabled") and
+                llm_config.get("fallback_to_llm", False) and
+                (llm_config.get("api_key") or
+                 llm_config.get("provider") == "ollama")):
+            try:
+                client = LLMClient(llm_config)
+                result = await asyncio.wait_for(
+                    client.generate(user_message),
+                    timeout=15.0
+                )
                 
-                # Add helpful note if no context was used
-                if not context:
-                    response_text += "\n\n_Note: I'm answering based on my general knowledge._"
-                
-                dispatcher.utter_message(text=response_text)
-                return [SlotSet("llm_response", response_text)]
-            else:
-                dispatcher.utter_message(response="utter_default")
-                return []
-                
-        except Exception as e:
-            logger.error(f"LLM fallback error: {e}")
-            dispatcher.utter_message(response="utter_default")
-            return []
+                if result.get("success"):
+                    response_text = result["response"]
+                    response_text += (
+                        "\n\n_Note: I'm answering based on "
+                        "my general knowledge._"
+                    )
+                    dispatcher.utter_message(text=response_text)
+                    return [SlotSet("llm_response", response_text)]
+            except asyncio.TimeoutError:
+                logger.warning("LLM direct response timed out")
+            except Exception as e:
+                logger.error(f"LLM fallback error: {e}")
+        else:
+            logger.info("LLM not configured or disabled, skipping")
+
+        # =================================================================
+        # STEP 3: Neither KB nor LLM answered - use default response
+        # =================================================================
+        logger.info("No answer from KB or LLM, using default response")
+        dispatcher.utter_message(response="utter_default")
+        return []
