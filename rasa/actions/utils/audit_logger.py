@@ -41,7 +41,7 @@ class AuditLogger:
             try:
                 import asyncpg
                 
-                db_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/chatbot")
+                db_url = os.getenv("DATABASE_URL", f"postgresql://{os.getenv('DB_USER', 'rasa')}@{os.getenv('DB_HOST', 'postgres')}:{os.getenv('DB_PORT', '5432')}/{os.getenv('DB_NAME', 'chatbot')}")
                 cls._db_pool = await asyncpg.create_pool(db_url, min_size=1, max_size=5)
                 
                 # Ensure audit table exists

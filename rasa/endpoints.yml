@@ -23,7 +23,7 @@ tracker_store:
   port: 6379
   db: 0
   # key_prefix: "tracker:"
-  # password: "${REDIS_PASSWORD}"  # Uncomment for production
+  password: "${REDIS_PASSWORD}"
 
 # For local development without Redis:
 # tracker_store:
@@ -39,7 +39,7 @@ lock_store:
   port: 6379
   db: 1
   # key_prefix: "lock:"
-  # password: "${REDIS_PASSWORD}"
+  password: "${REDIS_PASSWORD}"
 
 # -----------------------------------------------------------------------------
 # Event Broker (Optional - for analytics/streaming)

@@ -19,19 +19,19 @@ services:
     environment:
       - RASA_DUCKLING_HTTP_URL=http://duckling:8000
       - REDIS_URL=redis://redis:6379/0
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-chatbot}
       - POSTGRES_USER=${POSTGRES_USER:-rasa}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     command:
       - run
       - --enable-api
       - --cors
-      - "*"
+      - "${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}"
       - --endpoints
       - endpoints.yml
-      - --debug
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,11 +66,12 @@ services:
       - API_BASE_URL=${API_BASE_URL:-http://api-server:8000}
       - ADMIN_API_URL=http://admin-api:8080
       - REDIS_URL=redis://redis:6379/0
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=${POSTGRES_DB:-chatbot}
       - DB_USER=${POSTGRES_USER:-rasa}
-      - DB_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
       - CHROMADB_HOST=chromadb
       - CHROMADB_PORT=8000
       - CHROMA_HOST=chromadb
@@ -104,9 +105,10 @@ services:
       - DB_PORT=5432
       - DB_NAME=${POSTGRES_DB:-chatbot}
       - DB_USER=${POSTGRES_USER:-rasa}
-      - DB_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
       - REDIS_URL=redis://redis:6379/0
-      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - JWT_SECRET=${JWT_SECRET}
       - CORS_ORIGINS=*
       - RASA_DIR=/app/rasa
       - CHROMADB_HOST=chromadb
@@ -158,8 +160,8 @@ services:
   chromadb:
     image: chromadb/chroma:0.5.23
     container_name: chromadb
-    ports:
-      - "8001:8000"
+    expose:
+      - "8000"
     volumes:
       - chromadb-data:/chroma/chroma
     environment:
@@ -181,15 +183,15 @@ services:
   postgres:
     image: postgres:15-alpine
     container_name: postgres
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./admin/config/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-chatbot}
       - POSTGRES_USER=${POSTGRES_USER:-rasa}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-rasa_password}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     networks:
       - chatbot-network
     healthcheck:
@@ -205,11 +207,11 @@ services:
   redis:
     image: redis:7-alpine
     container_name: redis
-    ports:
-      - "6379:6379"
+    expose:
+      - "6379"
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy volatile-lru --requirepass ${REDIS_PASSWORD:-changeme}
     networks:
       - chatbot-network
     healthcheck:

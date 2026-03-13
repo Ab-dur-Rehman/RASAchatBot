@@ -173,16 +173,19 @@ nano .env.production
 
 **Critical settings to change:**
 ```bash
-# Database
-POSTGRES_PASSWORD=<strong-random-password>
+# Database - USE STRONG RANDOM PASSWORDS
+POSTGRES_PASSWORD=<strong-random-password-32-chars>
 
-# Security
-JWT_SECRET=<256-bit-random-key>
+# Redis
+REDIS_PASSWORD=<strong-random-password-32-chars>
+
+# Security - Generate with: python -c "import secrets; print(secrets.token_hex(32))"
+JWT_SECRET=<64-char-hex-secret>
 
 # API
 API_BASE_URL=https://your-backend-api.com
 
-# CORS
+# CORS - your actual domain(s)
 CORS_ORIGINS=https://your-website.com
 ```
 
@@ -302,14 +305,11 @@ models:
 |----------|-------------|---------|
 | `POSTGRES_DB` | Database name | chatbot |
 | `POSTGRES_USER` | Database user | rasa |
-| `POSTGRES_PASSWORD` | Database password | (required) |
+| `POSTGRES_PASSWORD` | Database password | **(required)** |
 | `REDIS_URL` | Redis connection string | redis://redis:6379/0 |
-| `JWT_SECRET` | JWT signing key | (required) |
-| `CORS_ORIGINS` | Allowed origins | http://localhost:3000 |
-| `LOG_LEVEL` | Logging verbosity | INFO |
-
-### Runtime Configuration (Admin API)
-
+| `REDIS_PASSWORD` | Redis authentication password | **(required)** |
+| `JWT_SECRET` | JWT signing key (min 32 chars) | **(required)** |
+| `CORS_ORIGINS` | Comma-separated allowed origins | http://localhost:3000,http://localhost:8080 |
 Tasks can be configured at runtime via the admin API:
 
 ```bash

@@ -54,7 +54,7 @@ async def get_db():
             port=int(os.getenv("DB_PORT", 5432)),
             database=os.getenv("DB_NAME", "chatbot"),
             user=os.getenv("DB_USER", "rasa"),
-            password=os.getenv("DB_PASSWORD", "rasa_password"),
+            password=os.getenv("DB_PASSWORD"),
             min_size=2,
             max_size=10
         )
@@ -63,10 +63,26 @@ async def get_db():
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify admin token (simplified for development)."""
+    """Verify admin token using JWT."""
+    import jwt
     if credentials is None:
-        return {"user_id": 0, "email": "anonymous", "role": "viewer"}
-    return {"user_id": 1, "email": "admin@example.com", "role": "admin"}
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    try:
+        secret = os.getenv("JWT_SECRET")
+        if not secret:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="JWT_SECRET not configured"
+            )
+        payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
+        return {"user_id": payload.get("sub"), "email": payload.get("email"), "role": payload.get("role", "viewer")}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
 # =============================================================================
@@ -290,6 +306,16 @@ async def upload_document(
     user: dict = Depends(verify_token)
 ) -> Dict[str, Any]:
     """Upload and process a document."""
+    # Validate file size (max 10MB)
+    MAX_UPLOAD_SIZE = 10 * 1024 * 1024
+    contents = await file.read()
+    if len(contents) > MAX_UPLOAD_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large. Maximum size is {MAX_UPLOAD_SIZE // (1024*1024)}MB"
+        )
+    await file.seek(0)
+
     # Validate file type
     file_ext = Path(file.filename).suffix.lower()
     if file_ext not in SUPPORTED_FILE_TYPES:

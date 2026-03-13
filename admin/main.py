@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
                 port=int(os.getenv("DB_PORT", 5432)),
                 database=os.getenv("DB_NAME", "chatbot"),
                 user=os.getenv("DB_USER", "rasa"),
-                password=os.getenv("DB_PASSWORD", "rasa_password"),
+                password=os.getenv("DB_PASSWORD"),
                 min_size=5,
                 max_size=20,
                 timeout=10
@@ -76,14 +76,14 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware - allow all origins for dashboard
-cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+# CORS middleware - restrict origins in production
+cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080").split(",")]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow dashboard to connect
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Include routers

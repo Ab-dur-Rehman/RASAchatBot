@@ -11,11 +11,28 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
 
 router = APIRouter(prefix="/api/training", tags=["training"])
+security = HTTPBearer()
+
+
+async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify admin token using JWT."""
+    import jwt
+    try:
+        secret = os.getenv("JWT_SECRET")
+        if not secret:
+            raise HTTPException(status_code=500, detail="JWT_SECRET not configured")
+        payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
+        return {"user_id": payload.get("sub"), "email": payload.get("email"), "role": payload.get("role", "viewer")}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 # =============================================================================
 # CONFIGURATION
@@ -124,7 +141,7 @@ def format_nlu_examples(intent_examples: Dict[str, List[str]]) -> List[Dict]:
 # =============================================================================
 
 @router.get("/intents")
-async def get_all_intents():
+async def get_all_intents(_: dict = Depends(verify_token)):
     """Get all intents with their training examples."""
     nlu_data = load_yaml_file(NLU_FILE)
     intent_examples = parse_nlu_examples(nlu_data)
@@ -138,7 +155,7 @@ async def get_all_intents():
 
 
 @router.get("/intents/{intent_name}")
-async def get_intent(intent_name: str):
+async def get_intent(intent_name: str, _: dict = Depends(verify_token)):
     """Get a specific intent with its examples."""
     nlu_data = load_yaml_file(NLU_FILE)
     intent_examples = parse_nlu_examples(nlu_data)
@@ -154,7 +171,7 @@ async def get_intent(intent_name: str):
 
 
 @router.post("/intents")
-async def create_intent(intent_data: IntentCreate):
+async def create_intent(intent_data: IntentCreate, _: dict = Depends(verify_token)):
     """Create a new intent with examples."""
     nlu_data = load_yaml_file(NLU_FILE)
     
@@ -187,7 +204,7 @@ async def create_intent(intent_data: IntentCreate):
 
 
 @router.put("/intents/{intent_name}")
-async def update_intent(intent_name: str, intent_data: IntentCreate):
+async def update_intent(intent_name: str, intent_data: IntentCreate, _: dict = Depends(verify_token)):
     """Update an existing intent's examples."""
     nlu_data = load_yaml_file(NLU_FILE)
     
@@ -208,7 +225,7 @@ async def update_intent(intent_name: str, intent_data: IntentCreate):
 
 
 @router.delete("/intents/{intent_name}")
-async def delete_intent(intent_name: str):
+async def delete_intent(intent_name: str, _: dict = Depends(verify_token)):
     """Delete an intent."""
     nlu_data = load_yaml_file(NLU_FILE)
     
@@ -234,7 +251,7 @@ async def delete_intent(intent_name: str):
 # =============================================================================
 
 @router.post("/examples")
-async def add_training_examples(request: TrainingExamplesRequest):
+async def add_training_examples(request: TrainingExamplesRequest, _: dict = Depends(verify_token)):
     """Add multiple training examples to existing or new intents."""
     nlu_data = load_yaml_file(NLU_FILE)
     
@@ -295,7 +312,7 @@ async def add_training_examples(request: TrainingExamplesRequest):
 # =============================================================================
 
 @router.get("/responses")
-async def get_all_responses():
+async def get_all_responses(_: dict = Depends(verify_token)):
     """Get all bot responses."""
     domain_data = load_yaml_file(DOMAIN_FILE)
     responses = domain_data.get('responses', {})
@@ -304,7 +321,7 @@ async def get_all_responses():
 
 
 @router.get("/responses/{response_name}")
-async def get_response(response_name: str):
+async def get_response(response_name: str, _: dict = Depends(verify_token)):
     """Get a specific response."""
     domain_data = load_yaml_file(DOMAIN_FILE)
     responses = domain_data.get('responses', {})
@@ -316,7 +333,7 @@ async def get_response(response_name: str):
 
 
 @router.post("/responses")
-async def create_or_update_response(response_data: ResponseCreate):
+async def create_or_update_response(response_data: ResponseCreate, _: dict = Depends(verify_token)):
     """Create or update a bot response."""
     domain_data = load_yaml_file(DOMAIN_FILE)
     
@@ -339,7 +356,7 @@ async def create_or_update_response(response_data: ResponseCreate):
 
 
 @router.delete("/responses/{response_name}")
-async def delete_response(response_name: str):
+async def delete_response(response_name: str, _: dict = Depends(verify_token)):
     """Delete a response."""
     domain_data = load_yaml_file(DOMAIN_FILE)
     
@@ -362,7 +379,7 @@ async def delete_response(response_name: str):
 # =============================================================================
 
 @router.get("/rules")
-async def get_all_rules():
+async def get_all_rules(_: dict = Depends(verify_token)):
     """Get all conversation rules."""
     rules_data = load_yaml_file(RULES_FILE)
     rules = rules_data.get('rules', [])
@@ -371,7 +388,7 @@ async def get_all_rules():
 
 
 @router.post("/rules")
-async def create_rule(rule_data: RuleCreate):
+async def create_rule(rule_data: RuleCreate, _: dict = Depends(verify_token)):
     """Create a new conversation rule."""
     rules_data = load_yaml_file(RULES_FILE)
     
@@ -460,7 +477,7 @@ def run_training():
 
 
 @router.post("/train")
-async def train_model(background_tasks: BackgroundTasks):
+async def train_model(background_tasks: BackgroundTasks, _: dict = Depends(verify_token)):
     """Start model training in the background."""
     if training_status["is_training"]:
         raise HTTPException(status_code=409, detail="Training already in progress")
@@ -471,13 +488,13 @@ async def train_model(background_tasks: BackgroundTasks):
 
 
 @router.get("/train/status")
-async def get_training_status():
+async def get_training_status(_: dict = Depends(verify_token)):
     """Get current training status."""
     return training_status
 
 
 @router.get("/models")
-async def list_models():
+async def list_models(_: dict = Depends(verify_token)):
     """List all trained models."""
     models = []
     
@@ -501,7 +518,7 @@ async def list_models():
 # =============================================================================
 
 @router.get("/domain")
-async def get_domain_overview():
+async def get_domain_overview(_: dict = Depends(verify_token)):
     """Get overview of the domain configuration."""
     domain_data = load_yaml_file(DOMAIN_FILE)
     

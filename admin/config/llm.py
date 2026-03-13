@@ -38,7 +38,7 @@ async def get_db():
             port=int(os.getenv("DB_PORT", 5432)),
             database=os.getenv("DB_NAME", "chatbot"),
             user=os.getenv("DB_USER", "rasa"),
-            password=os.getenv("DB_PASSWORD", "rasa_password"),
+            password=os.getenv("DB_PASSWORD"),
             min_size=2,
             max_size=10
         )
@@ -47,10 +47,26 @@ async def get_db():
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify admin token."""
+    """Verify admin token using JWT."""
+    import jwt
     if credentials is None:
-        return {"user_id": 0, "email": "anonymous", "role": "viewer"}
-    return {"user_id": 1, "email": "admin@example.com", "role": "admin"}
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required"
+        )
+    try:
+        secret = os.getenv("JWT_SECRET")
+        if not secret:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="JWT_SECRET not configured"
+            )
+        payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
+        return {"user_id": payload.get("sub"), "email": payload.get("email"), "role": payload.get("role", "viewer")}
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 
 # =============================================================================
