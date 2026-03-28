@@ -294,7 +294,7 @@ class ActionAnswerFromKnowledgeBase(Action):
             results = await kb_client.search(
                 query=user_message,
                 top_k=3,
-                min_score=0.5
+                min_score=0.65
             )
             
             if not results:
@@ -415,6 +415,14 @@ GREETING_WORDS = {
     "hi there", "hello there", "hey there"
 }
 
+GOODBYE_WORDS = {
+    "bye", "goodbye", "good bye", "bye bye", "see ya", "see you",
+    "see you later", "later", "take care", "gotta go", "gtg", "ttyl",
+    "cya", "catch you later", "goog bye", "god bye", "gbye", "goodby",
+    "byee", "bbye", "i'm leaving", "i'm done", "that's all",
+    "talk to you later", "have a nice day", "goood bye"
+}
+
 
 class ActionLLMFallback(Action):
     """
@@ -456,6 +464,13 @@ class ActionLLMFallback(Action):
                 return []
 
             # =============================================================
+            # STEP 0b: Goodbye detection — never let "bye/goodbye" hit fallback
+            # =============================================================
+            if msg_lower in GOODBYE_WORDS:
+                dispatcher.utter_message(response="utter_goodbye")
+                return []
+
+            # =============================================================
             # STEP 1: Try Knowledge Base first (no LLM config required)
             # =============================================================
             kb_results = []
@@ -464,7 +479,7 @@ class ActionLLMFallback(Action):
                 kb_results = await kb_client.search(
                     query=user_message,
                     top_k=3,
-                    min_score=0.5
+                    min_score=0.65
                 )
                 logger.info(f"KB search returned {len(kb_results)} results")
             except Exception as e:

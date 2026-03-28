@@ -89,3 +89,8 @@ rules:
   steps:
     - intent: ask_knowledge_base
     - action: action_answer_from_knowledge_base
+
+- rule: Answer service detail question
+  steps:
+    - intent: ask_service_detail
+    - action: utter_provide_service_detail

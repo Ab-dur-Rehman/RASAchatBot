@@ -211,7 +211,7 @@ class ActionSearchKnowledgeBase(Action):
             results = await kb_client.search(
                 query=search_terms,
                 top_k=5,
-                min_score=0.5
+                min_score=0.65
             )
             
             if results:

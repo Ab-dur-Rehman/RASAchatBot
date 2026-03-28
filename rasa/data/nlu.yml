@@ -28,6 +28,23 @@ nlu:
     - catch you later
     - see you
     - I'm leaving
+    - good bye
+    - goog bye
+    - god bye
+    - goood bye
+    - byee
+    - by
+    - bbye
+    - goodby
+    - gbye
+    - later
+    - gtg
+    - gotta go
+    - I'm done
+    - that's all
+    - talk to you later
+    - ttyl
+    - cya
 
 - intent: thank_you
   examples: |
@@ -132,6 +149,13 @@ nlu:
     - where can I find you?
     - your location please
     - give me directions
+    - where is your company located?
+    - what is your office address?
+    - where is your store?
+    - what's the business address?
+    - company location
+    - office location
+    - how to reach your office
 
 - intent: ask_services
   examples: |
@@ -204,12 +228,55 @@ nlu:
     - what's 2+2?
     - random question
     - something completely different
+    - what is an API?
+    - where is pakistan located
+    - where is france
+    - what is the capital of japan
+    - who invented the internet
+    - how does gravity work
+    - what is machine learning
+    - how to deploy wordpress locally
+    - explain quantum physics
+    - what is python programming
+    - how tall is mount everest
+    - what is the meaning of life
+    - who won the world cup
+    - what is blockchain
+    - how to cook pasta
+    - what is the population of china
+    - tell me about history
+    - what is climate change
+    - how far is the moon
+    - translate hello to french
+
+- intent: ask_service_detail
+  examples: |
+    - consultation
+    - tell me more about consultation
+    - more details about demo
+    - I want to know more about support
+    - consultation services
+    - demo sessions
+    - support services
+    - tell me about the consultation service
+    - what is the demo service
+    - more info on support
+    - explain consultation
+    - details about demo
+    - I'm interested in consultation
+    - I'm interested in support
+    - I'd like to learn more about demo
+    - what does consultation include
+    - what does support cover
 
 - intent: nlu_fallback
   examples: |
     - asdfghjkl
     - xyzabc123
     - jkljklj
+    - asdkjhasd
+    - qwerty12345
+    - aaabbbccc
 
 - intent: ask_shipping_info
   examples: |

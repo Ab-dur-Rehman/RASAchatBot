@@ -20,6 +20,7 @@ intents:
 - out_of_scope
 - nlu_fallback
 - ask_shipping_info
+- ask_service_detail
 entities:
 - info_type
 slots:
@@ -81,6 +82,18 @@ responses:
       • Support - Technical assistance
 
       Would you like more details about any of these?'
+  utter_provide_service_detail:
+  - text: 'Here are details about our services:
+
+      • **Consultation** ($50/hr) - Expert advice and strategic planning for your
+      business needs. Book a session to discuss your goals.
+
+      • **Demo** (Free) - Hands-on demonstrations of our solutions. See how we can
+      help before committing.
+
+      • **Support** ($75/hr) - Technical and business support to help you succeed.
+
+      Would you like to book any of these? Contact us at (555) 123-4567.'
   utter_provide_pricing:
   - text: 'Our pricing varies by service:
 
@@ -161,6 +174,7 @@ actions:
 - action_llm_fallback
 - action_answer_question
 - action_search_knowledge_base
+- utter_provide_service_detail
 session_config:
   session_expiration_time: 60
   carry_over_slots_to_new_session: true
