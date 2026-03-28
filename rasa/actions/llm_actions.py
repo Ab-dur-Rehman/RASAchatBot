@@ -244,19 +244,22 @@ class LLMClient:
 
 
 async def get_llm_config() -> Optional[Dict[str, Any]]:
-    """Get LLM configuration from admin API."""
+    """Get LLM configuration from admin API using internal service key."""
     import aiohttp
     
+    internal_key = os.getenv("INTERNAL_API_KEY", "")
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"{ADMIN_API_URL}/api/llm/config",
-                headers={"Authorization": "Bearer internal"},
+                f"{ADMIN_API_URL}/api/llm/internal/config",
+                headers={"X-Internal-Key": internal_key},
                 timeout=aiohttp.ClientTimeout(total=10)
             ) as response:
                 if response.status == 200:
                     data = await response.json()
                     return data.get("config")
+                else:
+                    logger.warning(f"LLM config fetch returned {response.status}")
     except Exception as e:
         logger.error(f"Failed to get LLM config: {e}")
     
@@ -406,100 +409,143 @@ class ActionLLMResponse(Action):
             return []
 
 
+GREETING_WORDS = {
+    "hi", "hello", "hey", "howdy", "greetings", "hiya", "heya", "yo",
+    "good morning", "good afternoon", "good evening", "good day",
+    "hi there", "hello there", "hey there"
+}
+
+
 class ActionLLMFallback(Action):
     """
     Smart fallback action for when RASA NLU confidence is low.
-    
-    Follows this priority chain:
-    1. Search Knowledge Base - if good results found, answer directly
-    2. Use LLM (with KB context if available) - if LLM is configured
-    3. Default response - if neither KB nor LLM can answer
+
+    Priority chain:
+    1. Greeting detection  — respond immediately with utter_greet
+    2. Knowledge Base      — if relevant content found, answer directly
+    3. LLM (with KB RAG)  — if LLM is enabled and has an API key
+    4. Default response    — polite fallback when nothing else works
     """
-    
+
     def name(self) -> Text:
         return "action_llm_fallback"
-    
+
     async def run(
         self,
         dispatcher: CollectingDispatcher,
         tracker: Tracker,
         domain: Dict[Text, Any]
     ) -> List[Dict[Text, Any]]:
-        
+
         user_message = tracker.latest_message.get("text", "")
         intent = tracker.latest_message.get("intent", {})
         confidence = intent.get("confidence", 0)
-        
+
         logger.info(
             f"Fallback triggered. Intent: {intent.get('name')}, "
             f"Confidence: {confidence:.3f}, Message: '{user_message}'"
         )
-        
-        # =================================================================
-        # STEP 1: Try Knowledge Base first (no LLM config required)
-        # =================================================================
-        kb_results = []
+
         try:
-            kb_client = KnowledgeBaseClient()
-            kb_results = await kb_client.search(
-                query=user_message,
-                top_k=3,
-                min_score=0.65
-            )
-            logger.info(f"KB search returned {len(kb_results)} results")
-        except Exception as e:
-            logger.warning(f"KB search in fallback failed: {e}")
-        
-        if kb_results:
-            top_result = kb_results[0]
-            logger.info(
-                f"KB hit: score={top_result.get('score')}, "
-                f"source={top_result.get('source')}"
-            )
-            
-            # Return KB results directly
-            content = top_result.get("content", "")[:500]
-            source = top_result.get("source", "Knowledge Base")
-            dispatcher.utter_message(
-                text=f"Here's what I found:\n\n{content}\n\n"
-                     f"📖 *Source: {source}*"
-            )
-            return []
-        
-        # =================================================================
-        # STEP 2: No KB results - Try LLM (if configured)
-        # =================================================================
-        llm_config = await get_llm_config()
-        
-        if (llm_config and llm_config.get("enabled") and
-                llm_config.get("fallback_to_llm", False) and
-                (llm_config.get("api_key") or
-                 llm_config.get("provider") == "ollama")):
+            # =============================================================
+            # STEP 0: Greeting detection — never let "hi/hello" hit fallback
+            # =============================================================
+            msg_lower = user_message.lower().strip().rstrip("!.,?")
+            if msg_lower in GREETING_WORDS:
+                dispatcher.utter_message(response="utter_greet")
+                return []
+
+            # =============================================================
+            # STEP 1: Try Knowledge Base first (no LLM config required)
+            # =============================================================
+            kb_results = []
             try:
-                client = LLMClient(llm_config)
-                result = await asyncio.wait_for(
-                    client.generate(user_message),
-                    timeout=15.0
+                kb_client = KnowledgeBaseClient()
+                kb_results = await kb_client.search(
+                    query=user_message,
+                    top_k=3,
+                    min_score=0.5
                 )
-                
-                if result.get("success"):
-                    response_text = result["response"]
-                    response_text += (
-                        "\n\n_Note: I'm answering based on "
-                        "my general knowledge._"
-                    )
-                    dispatcher.utter_message(text=response_text)
-                    return [SlotSet("llm_response", response_text)]
-            except asyncio.TimeoutError:
-                logger.warning("LLM direct response timed out")
+                logger.info(f"KB search returned {len(kb_results)} results")
             except Exception as e:
-                logger.error(f"LLM fallback error: {e}")
-        else:
-            logger.info("LLM not configured or disabled, skipping")
+                logger.warning(f"KB search in fallback failed: {e}")
+
+            if kb_results:
+                top_result = kb_results[0]
+                logger.info(
+                    f"KB hit: score={top_result.get('score')}, "
+                    f"source={top_result.get('source')}"
+                )
+
+                # If LLM is available, use it to generate a better answer
+                llm_config_for_kb = await get_llm_config()
+                if (llm_config_for_kb and llm_config_for_kb.get("enabled") and
+                        (llm_config_for_kb.get("api_key") or
+                         llm_config_for_kb.get("provider") == "ollama")):
+                    context = "\n\n---\n\n".join([
+                        f"[Source: {r.get('source', 'Unknown')}]\n{r.get('content', '')}"
+                        for r in kb_results
+                    ])
+                    try:
+                        client = LLMClient(llm_config_for_kb)
+                        llm_result = await asyncio.wait_for(
+                            client.generate(user_message, context),
+                            timeout=15.0
+                        )
+                        if llm_result.get("success"):
+                            source = kb_results[0].get("source", "Knowledge Base")
+                            dispatcher.utter_message(
+                                text=f"{llm_result['response']}\n\n"
+                                     f"📖 *Source: {source}*"
+                            )
+                            return [SlotSet("llm_response", llm_result["response"])]
+                    except Exception as e:
+                        logger.warning(f"LLM+KB generation failed, using raw KB: {e}")
+
+                # Fallback: return raw KB content
+                content = top_result.get("content", "")[:500]
+                source = top_result.get("source", "Knowledge Base")
+                dispatcher.utter_message(
+                    text=f"Here's what I found:\n\n{content}\n\n"
+                         f"📖 *Source: {source}*"
+                )
+                return []
+
+            # =============================================================
+            # STEP 2: No KB results — Try LLM directly (general knowledge)
+            # =============================================================
+            llm_config = await get_llm_config()
+
+            if (llm_config and llm_config.get("enabled") and
+                    llm_config.get("fallback_to_llm", True) and
+                    (llm_config.get("api_key") or
+                     llm_config.get("provider") == "ollama")):
+                try:
+                    client = LLMClient(llm_config)
+                    result = await asyncio.wait_for(
+                        client.generate(user_message),
+                        timeout=15.0
+                    )
+
+                    if result.get("success"):
+                        response_text = result["response"]
+                        dispatcher.utter_message(text=response_text)
+                        return [SlotSet("llm_response", response_text)]
+                    else:
+                        logger.error(f"LLM generation failed: {result.get('error')}")
+                except asyncio.TimeoutError:
+                    logger.warning("LLM direct response timed out")
+                except Exception as e:
+                    logger.error(f"LLM fallback error: {e}")
+            else:
+                logger.info("LLM not configured or disabled, skipping")
+
+        except Exception as e:
+            logger.error(f"Unexpected error in action_llm_fallback: {e}")
 
         # =================================================================
-        # STEP 3: Neither KB nor LLM answered - use default response
+        # STEP 3: Nothing worked — use polite default response
         # =================================================================
-        logger.info("No answer from KB or LLM, using default response")
+        logger.info("No answer from greeting/KB/LLM, using default response")
         dispatcher.utter_message(response="utter_default")
         return []

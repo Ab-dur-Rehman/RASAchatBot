@@ -29,7 +29,7 @@ services:
       - run
       - --enable-api
       - --cors
-      - "${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}"
+      - "*"
       - --endpoints
       - endpoints.yml
     depends_on:
@@ -76,6 +76,7 @@ services:
       - CHROMADB_PORT=8000
       - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     depends_on:
       - postgres
@@ -109,8 +110,11 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - JWT_SECRET=${JWT_SECRET}
-      - CORS_ORIGINS=*
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-admin}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000,http://localhost:8080}
       - RASA_DIR=/app/rasa
+      - RASA_URL=http://rasa:5005
       - CHROMADB_HOST=chromadb
       - CHROMADB_PORT=8000
       - UPLOAD_DIR=/app/knowledge_base/data
@@ -215,7 +219,7 @@ services:
     networks:
       - chatbot-network
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-changeme} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 3

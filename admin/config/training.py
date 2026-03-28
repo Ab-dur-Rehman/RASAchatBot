@@ -21,13 +21,19 @@ security = HTTPBearer()
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify admin token using JWT."""
+    """Verify admin token using JWT or static ADMIN_TOKEN."""
     import jwt
+    import hmac
+    token = credentials.credentials
+    # Accept static ADMIN_TOKEN for dashboard / development use
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if admin_token and hmac.compare_digest(token, admin_token):
+        return {"user_id": "admin", "email": "admin@local", "role": "admin"}
     try:
         secret = os.getenv("JWT_SECRET")
         if not secret:
             raise HTTPException(status_code=500, detail="JWT_SECRET not configured")
-        payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
         return {"user_id": payload.get("sub"), "email": payload.get("email"), "role": payload.get("role", "viewer")}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")

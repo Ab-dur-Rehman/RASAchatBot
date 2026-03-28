@@ -6,6 +6,7 @@
 
 import os
 import uuid
+import hmac
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -63,13 +64,18 @@ async def get_db():
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify admin token using JWT."""
+    """Verify admin token using JWT or static ADMIN_TOKEN."""
     import jwt
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required"
         )
+    token = credentials.credentials
+    # Accept static ADMIN_TOKEN for dashboard / development use
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if admin_token and hmac.compare_digest(token, admin_token):
+        return {"user_id": "admin", "email": "admin@local", "role": "admin"}
     try:
         secret = os.getenv("JWT_SECRET")
         if not secret:
@@ -77,7 +83,7 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="JWT_SECRET not configured"
             )
-        payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
         return {"user_id": payload.get("sub"), "email": payload.get("email"), "role": payload.get("role", "viewer")}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")

@@ -6,11 +6,12 @@
 
 import os
 import json
+import hmac
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Form, Body, status
+from fastapi import APIRouter, Depends, HTTPException, Form, Body, Request, Header, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import asyncpg
 
@@ -47,13 +48,18 @@ async def get_db():
 
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify admin token using JWT."""
+    """Verify admin token using JWT or static ADMIN_TOKEN."""
     import jwt
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication required"
         )
+    token = credentials.credentials
+    # Accept static ADMIN_TOKEN for dashboard / development use
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if admin_token and hmac.compare_digest(token, admin_token):
+        return {"user_id": "admin", "email": "admin@local", "role": "admin"}
     try:
         secret = os.getenv("JWT_SECRET")
         if not secret:
@@ -61,12 +67,23 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="JWT_SECRET not configured"
             )
-        payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
+        payload = jwt.decode(token, secret, algorithms=["HS256"])
         return {"user_id": payload.get("sub"), "email": payload.get("email"), "role": payload.get("role", "viewer")}
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+async def verify_internal_key(x_internal_key: Optional[str] = Header(None)):
+    """Verify internal service-to-service API key."""
+    expected_key = os.getenv("INTERNAL_API_KEY")
+    if not x_internal_key or not expected_key or not hmac.compare_digest(x_internal_key, expected_key):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid internal service key"
+        )
+    return True
 
 
 # =============================================================================
@@ -376,6 +393,16 @@ async def get_kb_context(query: str, collection: str = "website_content") -> str
 # =============================================================================
 # API ENDPOINTS
 # =============================================================================
+
+@router.get("/internal/config")
+async def get_internal_config(
+    conn: asyncpg.Connection = Depends(get_db),
+    _: bool = Depends(verify_internal_key)
+) -> Dict[str, Any]:
+    """Get full LLM configuration for internal services (includes API key)."""
+    config = await get_llm_config(conn)
+    return {"config": config}
+
 
 @router.get("/config")
 async def get_config(

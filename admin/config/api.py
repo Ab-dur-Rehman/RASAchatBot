@@ -7,9 +7,11 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import asyncpg
+import os
+import hmac
 
 from .schemas import (
     BotConfig,
@@ -63,7 +65,7 @@ async def get_db():
 # =============================================================================
 
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Verify admin token using JWT."""
+    """Verify admin token using JWT or static ADMIN_TOKEN."""
     import jwt
     token = credentials.credentials
     if not token:
@@ -71,6 +73,10 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials"
         )
+    # Accept static ADMIN_TOKEN for dashboard / development use
+    admin_token = os.getenv("ADMIN_TOKEN")
+    if admin_token and hmac.compare_digest(token, admin_token):
+        return {"user_id": "admin", "email": "admin@local", "role": "admin"}
     try:
         secret = os.getenv("JWT_SECRET")
         if not secret:
@@ -84,6 +90,32 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+
+async def verify_token_or_internal_key(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+    x_internal_key: Optional[str] = Header(None)
+):
+    """Verify either JWT token (user) or internal service key (service-to-service)."""
+    # Check internal key first (service-to-service calls)
+    expected_key = os.getenv("INTERNAL_API_KEY")
+    if x_internal_key and expected_key and hmac.compare_digest(x_internal_key, expected_key):
+        return {"user_id": "internal", "email": "internal@service", "role": "admin"}
+    
+    # Fall back to JWT token
+    if credentials:
+        import jwt
+        try:
+            secret = os.getenv("JWT_SECRET")
+            if not secret:
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="JWT_SECRET not configured")
+            payload = jwt.decode(credentials.credentials, secret, algorithms=["HS256"])
+            return {"user_id": payload.get("sub"), "email": payload.get("email"), "role": payload.get("role", "viewer")}
+        except Exception:
+            pass
+    
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
 
 
 # =============================================================================
@@ -203,7 +235,7 @@ async def sync_config_to_rasa_domain(config: BotConfig):
 @router.get("/config/tasks", response_model=List[TaskConfigResponse])
 async def get_all_task_configs(
     conn: asyncpg.Connection = Depends(get_db),
-    _: dict = Depends(verify_token)
+    _: dict = Depends(verify_token_or_internal_key)
 ):
     """Get all task configurations."""
     rows = await conn.fetch("SELECT * FROM task_config ORDER BY task_name")
@@ -222,7 +254,7 @@ async def get_all_task_configs(
 async def get_task_config(
     task_name: str,
     conn: asyncpg.Connection = Depends(get_db),
-    _: dict = Depends(verify_token)
+    _: dict = Depends(verify_token_or_internal_key)
 ):
     """Get specific task configuration."""
     row = await conn.fetchrow(

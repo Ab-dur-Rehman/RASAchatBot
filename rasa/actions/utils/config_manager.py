@@ -50,6 +50,11 @@ class ConfigManager:
         try:
             import redis
             redis_url = os.getenv("REDIS_URL", "redis://redis:6379/2")
+            redis_password = os.getenv("REDIS_PASSWORD", "")
+            # Inject password into the Redis URL if not already present
+            if redis_password and "@" not in redis_url:
+                # redis://redis:6379/2 -> redis://:password@redis:6379/2
+                redis_url = redis_url.replace("://", f"://:{redis_password}@", 1)
             self._redis = redis.from_url(redis_url)
         except ImportError:
             logger.warning("Redis package not installed, using in-memory cache")
@@ -128,10 +133,11 @@ class ConfigManager:
     async def _fetch_from_api(self, task_name: str) -> Optional[Dict]:
         """Fetch config from Admin API."""
         try:
-            url = f"{self.admin_api_url}/config/tasks/{task_name}"
+            url = f"{self.admin_api_url}/api/admin/config/tasks/{task_name}"
+            internal_key = os.getenv("INTERNAL_API_KEY", "")
             headers = {
                 "Content-Type": "application/json",
-                "X-API-Key": self.api_key
+                "X-Internal-Key": internal_key
             }
             
             async with aiohttp.ClientSession() as session:

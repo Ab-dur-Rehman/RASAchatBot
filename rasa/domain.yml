@@ -53,8 +53,10 @@ responses:
   utter_cheer_up:
   - text: I'm sorry to hear that. 😔 Let me know how I can help make things better.
   utter_default:
-  - text: I'm not sure I understand. Could you rephrase that?
-  - text: I didn't quite get that. Can you try asking in a different way?
+  - text: I'm not sure I have an answer for that. You can try rephrasing, ask about
+      our services/pricing/hours, or contact us directly.
+  - text: I didn't quite catch that. Feel free to ask about our services, pricing,
+      location, or contact details!
   utter_out_of_scope:
   - text: I can only help with questions about our business, services, and appointments.
       Is there something else I can help you with?
@@ -127,6 +129,12 @@ responses:
   utter_llm_unavailable:
   - text: I'm sorry, I can't provide an AI-powered response right now. Please try
       rephrasing your question or contact support.
+  utter_no_answer_found:
+  - text: I couldn't find a specific answer to that in my knowledge base. Could you
+      try rephrasing, or contact us directly for assistance?
+  utter_ask_clarification:
+  - text: Could you please clarify your question? I want to make sure I give you
+      the most accurate answer.
 actions:
 - utter_greet
 - utter_goodbye
@@ -146,9 +154,13 @@ actions:
 - utter_ask_knowledge_base
 - utter_llm_thinking
 - utter_llm_unavailable
+- utter_no_answer_found
+- utter_ask_clarification
 - action_answer_from_knowledge_base
 - action_llm_response
 - action_llm_fallback
+- action_answer_question
+- action_search_knowledge_base
 session_config:
   session_expiration_time: 60
   carry_over_slots_to_new_session: true
